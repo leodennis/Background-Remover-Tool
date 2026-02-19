@@ -1,1 +1,6 @@
 # Background-Remover-Tool
+Remove one colored backgrounds from images.
+
+This is a vibe coded tool and does not reflect professional quality standards.
+
+It was just created as a personal tool to help me with game development but might be useful for others.
