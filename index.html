@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Background Remover - Canvas Edition</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden; }
+    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+    header h1 { font-size: 28px; margin-bottom: 8px; }
+    header p { opacity: 0.9; font-size: 14px; }
+    .content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; padding: 30px; }
+    .preview-section { display: flex; flex-direction: column; gap: 20px; }
+    .canvas-container { position: relative; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: white; }
+    .canvas-wrapper { position: relative; display: inline-block; width: 100%; }
+    canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .preview-info { font-size: 12px; color: #666; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+    .preview-controls { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 15px; }
+    .controls-panel { background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 20px; max-height: 85vh; overflow-y: auto; }
+    .control-group { display: flex; flex-direction: column; gap: 8px; }
+    .control-group label { font-weight: 600; font-size: 13px; color: #333; display: flex; align-items: center; gap: 6px; }
+    .control-group input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none; -webkit-appearance: none; }
+    .control-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #667eea; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    .control-group input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #667eea; cursor: pointer; border: none; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    .value-display { font-size: 12px; color: #667eea; font-weight: 600; }
+    .checkbox-group { display: flex; align-items: center; gap: 8px; }
+    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
+    .color-picker-group { display: flex; gap: 8px; align-items: center; }
+    .color-input { width: 50px; height: 40px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; transition: border-color 0.2s; }
+    .color-input:hover { border-color: #667eea; }
+    .color-hex { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; }
+    .button-group { display: flex; gap: 8px; flex-direction: column; }
+    button { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5568d3; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+    .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ddd; }
+    .btn-secondary:hover { background: #e8e8e8; }
+    .btn-danger { background: #ff6b6b; color: white; }
+    .btn-danger:hover { background: #ff5252; }
+    .btn-success { background: #51cf66; color: white; }
+    .btn-success:hover { background: #40c057; }
+    .file-input-label { display: block; padding: 10px 16px; background: #667eea; color: white; border-radius: 6px; cursor: pointer; text-align: center; font-weight: 600; font-size: 13px; transition: all 0.2s; }
+    .file-input-label:hover { background: #5568d3; }
+    input[type="file"] { display: none; }
+    .info-box { background: #e7f5ff; border-left: 4px solid #667eea; padding: 12px; border-radius: 6px; font-size: 12px; color: #333; line-height: 1.5; }
+    .separator { height: 1px; background: #e0e0e0; margin: 8px 0; }
+    .eyedropper-btn { padding: 6px 8px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+    .eyedropper-btn:hover { background: #e8e8e8; border-color: #667eea; }
+    .eyedropper-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    @media (max-width: 900px) { .content { grid-template-columns: 1fr; } header h1 { font-size: 22px; } .controls-panel { max-height: none; } }
+    .spinner { display: none; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spinner.show { display: inline-block; }
+    .tab-buttons { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn { flex: 1; padding: 8px; background: #f0f0f0; border: 2px solid transparent; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+    .tab-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    .scale-input-group { display: flex; gap: 8px; align-items: center; }
+    .scale-input-group input[type="number"] { flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+    .auto-detect-badge { display: inline-block; background: #51cf66; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+    .processing-indicator { display: none; align-items: center; gap: 8px; padding: 8px 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 12px; color: #333; }
+    .processing-indicator.show { display: flex; }
+    .preview-bg-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bg-btn { width: 32px; height: 32px; border: 3px solid transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s; position: relative; flex-shrink: 0; }
+    .bg-btn:hover { transform: scale(1.1); border-color: #667eea; }
+    .bg-btn.active { border-color: #333; box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); }
+    .bg-btn[data-bg="transparent"] { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; background-color: white; }
+    .bg-btn[data-bg="black"] { background: #000000; } .bg-btn[data-bg="white"] { background: #ffffff; border-color: #999; } .bg-btn[data-bg="red"] { background: #ff6b6b; } .bg-btn[data-bg="green"] { background: #51cf66; } .bg-btn[data-bg="blue"] { background: #4dabf7; } .bg-btn[data-bg="yellow"] { background: #ffd43b; border-color: #999; } .bg-btn[data-bg="purple"] { background: #b197fc; } .bg-btn[data-bg="orange"] { background: #ff922b; } .bg-btn[data-bg="brown"] { background: #8b6f47; }
+    .canvas-bg-wrapper { position: relative; display: inline-block; width: 100%; background-color: white; background-image: none; background-size: auto; background-position: auto; }
+    .canvas-bg-wrapper.transparent { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; background-color: white; }
+    .section-title { font-size: 12px; font-weight: 600; color: #333; margin-bottom: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🎨 Background Remover Pro</h1>
+    <p>Advanced edge detection & smoothing with multiple enhancement techniques</p>
+  </header>
+
+  <div class="content">
+    <div class="preview-section">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="preview">Preview</button>
+        <button class="tab-btn" data-tab="original">Original</button>
+      </div>
+
+      <div class="canvas-container" id="previewContainer">
+        <div class="canvas-bg-wrapper transparent" id="canvasBgWrapper">
+          <div class="canvas-wrapper">
+            <canvas id="previewCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-info">
+        <div><strong>Image Dimensions:</strong> <span id="imageDim">-</span></div>
+        <div><strong>Auto Detected Background:</strong> <span id="bgColor">#FFFFFF</span></div>
+        <div style="margin-top: 8px; font-size: 11px; color: #999;">Real-time processing with multiple edge enhancement techniques</div>
+      </div>
+
+      <div class="processing-indicator" id="processingIndicator">
+        <div class="spinner"></div>
+        <span>Processing image...</span>
+      </div>
+
+      <div class="preview-controls">
+        <div class="control-group">
+          <label>Preview Background</label>
+          <div class="preview-bg-buttons">
+            <button class="bg-btn active" data-bg="transparent" title="Transparent"></button>
+            <button class="bg-btn" data-bg="black" title="Black"></button>
+            <button class="bg-btn" data-bg="white" title="White"></button>
+            <button class="bg-btn" data-bg="red" title="Red"></button>
+            <button class="bg-btn" data-bg="green" title="Green"></button>
+            <button class="bg-btn" data-bg="blue" title="Blue"></button>
+            <button class="bg-btn" data-bg="yellow" title="Yellow"></button>
+            <button class="bg-btn" data-bg="purple" title="Purple"></button>
+            <button class="bg-btn" data-bg="orange" title="Orange"></button>
+            <button class="bg-btn" data-bg="brown" title="Brown"></button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>
+            <div class="checkbox-group">
+              <input type="checkbox" id="autoScaleMode">
+              <span>Magnify Preview (Pixel Perfect)</span>
+            </div>
+          </label>
+          <div class="scale-input-group">
+            <label style="font-size: 12px; font-weight: 500; width: 80px;">Zoom Level:</label>
+            <input type="number" id="scaleSize" value="1" min="1" max="4" step="1">
+            <span style="font-size: 11px; color: #999;">x</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-success" id="downloadBtn">⬇️ Download PNG</button>
+        <button class="btn-secondary" id="resetBtn">🔄 Reset</button>
+      </div>
+    </div>
+
+    <div class="controls-panel">
+      <h3 style="font-size: 14px; color: #333; margin-bottom: 8px;">⚙️ Settings</h3>
+
+      <div class="control-group">
+        <label for="imageInput" class="file-input-label">📁 Load Image</label>
+        <input type="file" id="imageInput" accept="image/*">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="borderOnlyMode" checked>
+            <span>Detect from Edges Only</span>
+          </div>
+        </label>
+        <div class="info-box">ℹ️ Only removes background connected to image edges.</div>
+        <button class="btn-secondary" id="seedPickerBtn" style="font-size: 12px; padding: 6px;">📍 Edit Custom Seed Points</button>
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>Background Color <span class="auto-detect-badge" id="autoBadge" style="display: none;">Auto</span></label>
+        <div class="color-picker-group">
+          <input type="color" id="bgColorPicker" value="#ffffff">
+          <input type="text" id="bgColorHex" class="color-hex" value="#FFFFFF">
+          <button class="eyedropper-btn" id="eyedropperBtn" title="Click to pick color from image">🎯</button>
+        </div>
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>Color Tolerance <span class="value-display" id="toleranceValue">40</span></label>
+        <input type="range" id="tolerance" min="0" max="100" value="40">
+        <div class="info-box">ℹ️ Perceptual color match (higher = more colors matched).</div>
+      </div>
+      <div class="separator"></div>
+
+      <h4 class="section-title">✨ Edge Enhancement Techniques</h4>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableFeather" checked>
+            <span>🔄 Cubic Feathering (Soft Edges)</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Feather Radius <span class="value-display" id="featherValue">3</span></label>
+        <input type="range" id="feather" min="0" max="25" value="3">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableMorphology" checked>
+            <span>🔷 Mask Dilation (Remove fringes)</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Kernel Size <span class="value-display" id="morphValue">3</span></label>
+        <input type="range" id="morphology" min="1" max="7" value="3" step="1">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableMultisample" checked>
+            <span>📊 Alpha Channel Smoothing</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Smoothing Passes <span class="value-display" id="multisampleValue">2</span></label>
+        <input type="range" id="multisample" min="1" max="5" value="2">
+        <div class="info-box">ℹ️ Box blur on the transparency mask for anti-aliasing.</div>
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableDespill" checked>
+            <span>💧 Despill (Hue Shift)</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Despill Amount <span class="value-display" id="despillValue">40</span></label>
+        <input type="range" id="despill" min="0" max="100" value="40">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableBilateral">
+            <span>🌊 Bilateral Filter (Slow)</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Filter Strength <span class="value-display" id="bilateralValue">2</span></label>
+        <input type="range" id="bilateral" min="1" max="10" value="2">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="enableEdgeEnhance">
+            <span>🎯 Edge Sharpening</span>
+          </div>
+        </label>
+      </div>
+      <div class="control-group">
+        <label>Enhancement Strength <span class="value-display" id="edgeEnhanceValue">20</span></label>
+        <input type="range" id="edgeEnhance" min="0" max="100" value="20">
+      </div>
+      <div class="separator"></div>
+
+      <div class="control-group">
+        <label>
+          <div class="checkbox-group">
+            <input type="checkbox" id="showMask">
+            <span>Show Detection Mask</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========== APPLICATION STATE ==========
+  const state = {
+    originalImage: null,
+    originalImageForDisplay: null,
+    currentImage: null,
+    isEyedropperActive: false,
+    isSeedPickerActive: false,
+    seedPoints: [], // Holds {x, y} markers
+    originalCanvas: document.createElement('canvas'),
+    previewCanvas: document.getElementById('previewCanvas'),
+    previewCtx: null,
+    currentTab: 'preview',
+    isProcessing: false,
+    detectedBgColor: null,
+    currentPreviewBg: 'transparent',
+    pixelMagnification: 1
+  };
+
+  const ui = {
+    imageInput: document.getElementById('imageInput'),
+    bgColorPicker: document.getElementById('bgColorPicker'),
+    bgColorHex: document.getElementById('bgColorHex'),
+    tolerance: document.getElementById('tolerance'),
+    feather: document.getElementById('feather'),
+    borderOnlyMode: document.getElementById('borderOnlyMode'),
+    seedPickerBtn: document.getElementById('seedPickerBtn'),
+    showMask: document.getElementById('showMask'),
+    eyedropperBtn: document.getElementById('eyedropperBtn'),
+    downloadBtn: document.getElementById('downloadBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    previewContainer: document.getElementById('previewContainer'),
+    canvasBgWrapper: document.getElementById('canvasBgWrapper'),
+    imageDim: document.getElementById('imageDim'),
+    bgColor: document.getElementById('bgColor'),
+    toleranceValue: document.getElementById('toleranceValue'),
+    featherValue: document.getElementById('featherValue'),
+    tabButtons: document.querySelectorAll('.tab-btn'),
+    autoScaleMode: document.getElementById('autoScaleMode'),
+    scaleSize: document.getElementById('scaleSize'),
+    processingIndicator: document.getElementById('processingIndicator'),
+    autoBadge: document.getElementById('autoBadge'),
+    bgButtons: document.querySelectorAll('.bg-btn'),
+    enableFeather: document.getElementById('enableFeather'),
+    enableBilateral: document.getElementById('enableBilateral'),
+    bilateral: document.getElementById('bilateral'),
+    bilateralValue: document.getElementById('bilateralValue'),
+    enableDespill: document.getElementById('enableDespill'),
+    despill: document.getElementById('despill'),
+    despillValue: document.getElementById('despillValue'),
+    enableEdgeEnhance: document.getElementById('enableEdgeEnhance'),
+    edgeEnhance: document.getElementById('edgeEnhance'),
+    edgeEnhanceValue: document.getElementById('edgeEnhanceValue'),
+    enableMorphology: document.getElementById('enableMorphology'),
+    morphology: document.getElementById('morphology'),
+    morphValue: document.getElementById('morphValue'),
+    enableMultisample: document.getElementById('enableMultisample'),
+    multisample: document.getElementById('multisample'),
+    multisampleValue: document.getElementById('multisampleValue')
+  };
+
+  function init() {
+    state.previewCtx = state.previewCanvas.getContext('2d', { willReadFrequently: true });
+    
+    const bindSync = (el, valEl, action) => {
+      el.addEventListener('input', (e) => {
+        if(valEl) valEl.textContent = e.target.value;
+        action();
+      });
+    };
+
+    ui.imageInput.addEventListener('change', handleImageUpload);
+    ui.bgColorPicker.addEventListener('input', handleColorChange);
+    ui.bgColorHex.addEventListener('input', handleHexChange);
+    bindSync(ui.tolerance, ui.toleranceValue, updatePreview);
+    bindSync(ui.feather, ui.featherValue, updatePreview);
+    bindSync(ui.bilateral, ui.bilateralValue, updatePreview);
+    bindSync(ui.despill, ui.despillValue, updatePreview);
+    bindSync(ui.edgeEnhance, ui.edgeEnhanceValue, updatePreview);
+    bindSync(ui.morphology, ui.morphValue, updatePreview);
+    bindSync(ui.multisample, ui.multisampleValue, updatePreview);
+
+    ui.borderOnlyMode.addEventListener('change', updatePreview);
+    ui.enableFeather.addEventListener('change', updatePreview);
+    ui.enableBilateral.addEventListener('change', updatePreview);
+    ui.enableDespill.addEventListener('change', updatePreview);
+    ui.enableEdgeEnhance.addEventListener('change', updatePreview);
+    ui.enableMorphology.addEventListener('change', updatePreview);
+    ui.enableMultisample.addEventListener('change', updatePreview);
+    ui.showMask.addEventListener('change', updatePreview);
+
+    ui.eyedropperBtn.addEventListener('click', toggleEyedropper);
+    ui.seedPickerBtn.addEventListener('click', toggleSeedPicker);
+    
+    ui.downloadBtn.addEventListener('click', downloadImage);
+    ui.resetBtn.addEventListener('click', resetImage);
+    ui.autoScaleMode.addEventListener('change', updatePreview);
+    ui.scaleSize.addEventListener('change', updatePreview);
+    state.previewCanvas.addEventListener('click', handleCanvasClick);
+
+    ui.tabButtons.forEach(btn => btn.addEventListener('click', handleTabSwitch));
+    ui.bgButtons.forEach(btn => btn.addEventListener('click', handleBgButtonClick));
+  }
+
+  function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => loadImage(img);
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleColorChange(e) {
+    ui.bgColorHex.value = e.target.value.toUpperCase();
+    ui.autoBadge.style.display = 'none';
+    updatePreview();
+  }
+
+  function handleHexChange(e) {
+    let color = e.target.value;
+    if (!color.startsWith('#')) color = '#' + color;
+    if (color.length === 7 && /^#[0-9A-F]{6}$/i.test(color)) {
+      ui.bgColorPicker.value = color;
+      ui.autoBadge.style.display = 'none';
+      updatePreview();
+    }
+  }
+
+  function toggleEyedropper() {
+    state.isEyedropperActive = !state.isEyedropperActive;
+    ui.eyedropperBtn.classList.toggle('active', state.isEyedropperActive);
+    
+    if (state.isEyedropperActive) {
+      state.isSeedPickerActive = false;
+      ui.seedPickerBtn.classList.remove('btn-primary');
+      ui.seedPickerBtn.classList.add('btn-secondary');
+      state.previewCanvas.style.cursor = 'crosshair';
+    } else {
+      state.previewCanvas.style.cursor = 'default';
+    }
+  }
+
+  function toggleSeedPicker() {
+    state.isSeedPickerActive = !state.isSeedPickerActive;
+    ui.seedPickerBtn.classList.toggle('btn-primary', state.isSeedPickerActive);
+    ui.seedPickerBtn.classList.toggle('btn-secondary', !state.isSeedPickerActive);
+    
+    if (state.isSeedPickerActive) {
+      state.isEyedropperActive = false;
+      ui.eyedropperBtn.classList.remove('active');
+      state.previewCanvas.style.cursor = 'crosshair';
+    } else {
+      state.previewCanvas.style.cursor = 'default';
+    }
+  }
+
+  function handleCanvasClick(e) {
+    if (!state.currentImage) return;
+    if (!state.isEyedropperActive && !state.isSeedPickerActive) return;
+
+    // Use CSS Rect to properly compute image pixel mapping despite any styling
+    const rect = state.previewCanvas.getBoundingClientRect();
+    const scaleX = state.currentImage.width / rect.width;
+    const scaleY = state.currentImage.height / rect.height;
+    
+    const x = Math.floor((e.clientX - rect.left) * scaleX);
+    const y = Math.floor((e.clientY - rect.top) * scaleY);
+    
+    const canvasX = Math.max(0, Math.min(x, state.currentImage.width - 1));
+    const canvasY = Math.max(0, Math.min(y, state.currentImage.height - 1));
+
+    if (state.isEyedropperActive) {
+      // Pick color from the pure, unedited original image
+      const originalCtx = state.originalImageForDisplay.getContext('2d');
+      const imageData = originalCtx.getImageData(canvasX, canvasY, 1, 1);
+      const [r, g, b] = imageData.data;
+      const color = rgbToHex(r, g, b);
+      
+      ui.bgColorPicker.value = color;
+      ui.bgColorHex.value = color.toUpperCase();
+      ui.autoBadge.style.display = 'none';
+      
+      state.isEyedropperActive = false;
+      ui.eyedropperBtn.classList.remove('active');
+      state.previewCanvas.style.cursor = 'default';
+      updatePreview();
+    } 
+    else if (state.isSeedPickerActive) {
+      // Manage seed points
+      const hitRadius = 10;
+      const existingIndex = state.seedPoints.findIndex(pt => 
+         Math.hypot(pt.x - canvasX, pt.y - canvasY) < hitRadius
+      );
+      
+      if (existingIndex !== -1) {
+         state.seedPoints.splice(existingIndex, 1); // Remove if clicked nearby
+      } else {
+         state.seedPoints.push({ x: canvasX, y: canvasY }); // Add new seed
+      }
+      updatePreview();
+    }
+  }
+
+  function handleTabSwitch(e) {
+    state.currentTab = e.target.dataset.tab;
+    ui.tabButtons.forEach(btn => btn.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    updatePreview();
+  }
+
+  function handleBgButtonClick(e) {
+    const bg = e.currentTarget.dataset.bg;
+    ui.bgButtons.forEach(btn => btn.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    state.currentPreviewBg = bg;
+    updateCanvasBackground(bg);
+    updatePreview();
+  }
+
+  function updateCanvasBackground(bg) {
+    const wrapper = ui.canvasBgWrapper;
+    wrapper.classList.remove('transparent');
+    wrapper.style.backgroundColor = 'white';
+    if (bg === 'transparent') {
+      wrapper.classList.add('transparent');
+    } else {
+      const bgMap = { 'black': '#000', 'white': '#fff', 'red': '#ff6b6b', 'green': '#51cf66', 'blue': '#4dabf7', 'yellow': '#ffd43b', 'purple': '#b197fc', 'orange': '#ff922b', 'brown': '#8b6f47' };
+      wrapper.style.backgroundColor = bgMap[bg] || 'white';
+    }
+  }
+
+  function downloadImage() {
+    if (!state.originalImage) return alert('Please load an image first');
+    const downloadCanvas = document.createElement('canvas');
+    downloadCanvas.width = state.originalImage.width;
+    downloadCanvas.height = state.originalImage.height;
+    const downloadCtx = downloadCanvas.getContext('2d');
+    downloadCtx.drawImage(state.originalImage, 0, 0);
+    removeBackgroundWithOptions(downloadCtx, getBackgroundColor(), getProcessingOptions());
+    const link = document.createElement('a');
+    link.href = downloadCanvas.toDataURL('image/png');
+    link.download = 'background-removed.png';
+    link.click();
+  }
+
+  function resetImage() {
+    if (!state.originalImage) return alert('Please load an image first');
+    state.currentImage = state.originalImage;
+    state.seedPoints = []; // Reset seeds on fresh start
+    updatePreview();
+  }
+
+  function loadImage(img) {
+    const canvas = state.originalCanvas;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    state.originalImage = canvas;
+    state.originalImageForDisplay = document.createElement('canvas');
+    state.originalImageForDisplay.width = img.width;
+    state.originalImageForDisplay.height = img.height;
+    state.originalImageForDisplay.getContext('2d').drawImage(img, 0, 0);
+    state.currentImage = canvas;
+    state.seedPoints = []; // Reset seed points
+
+    detectBackgroundColor(canvas);
+    ui.imageDim.textContent = `${canvas.width} × ${canvas.height}px`;
+    updatePreview();
+  }
+
+  function detectBackgroundColor(canvas) {
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const edgePixels = [];
+    const step = 4 * Math.max(1, Math.floor(Math.min(canvas.width, canvas.height) / 32));
+    
+    // Sample edges safely
+    for (let i = 0; i < canvas.width * 4; i += step) edgePixels.push(`${imgData[i]},${imgData[i+1]},${imgData[i+2]}`);
+    
+    const colorMap = new Map();
+    let maxCount = 0;
+    let mostCommonColor = { r: 255, g: 255, b: 255 };
+
+    edgePixels.forEach(key => {
+      const count = (colorMap.get(key) || 0) + 1;
+      colorMap.set(key, count);
+      if (count > maxCount) {
+        maxCount = count;
+        const [r, g, b] = key.split(',').map(Number);
+        mostCommonColor = { r, g, b };
+      }
+    });
+
+    const hex = rgbToHex(mostCommonColor.r, mostCommonColor.g, mostCommonColor.b);
+    ui.bgColorPicker.value = hex;
+    ui.bgColorHex.value = hex.toUpperCase();
+    ui.bgColor.textContent = hex.toUpperCase();
+    ui.autoBadge.style.display = 'inline-block';
+  }
+
+  function getBackgroundColor() { return hexToRgb(ui.bgColorHex.value); }
+
+  function getProcessingOptions() {
+    return {
+      tolerance: parseInt(ui.tolerance.value),
+      feather: ui.enableFeather.checked ? parseInt(ui.feather.value) : 0,
+      borderOnly: ui.borderOnlyMode.checked,
+      bilateral: ui.enableBilateral.checked ? parseInt(ui.bilateral.value) : 0,
+      despill: ui.enableDespill.checked ? parseInt(ui.despill.value) : 0,
+      edgeEnhance: ui.enableEdgeEnhance.checked ? parseInt(ui.edgeEnhance.value) : 0,
+      morphology: ui.enableMorphology.checked ? parseInt(ui.morphology.value) : 0,
+      multisample: ui.enableMultisample.checked ? parseInt(ui.multisample.value) : 0,
+      showMask: ui.showMask.checked
+    };
+  }
+
+  function updatePreview() {
+    if (!state.originalImage) return;
+    ui.processingIndicator.classList.add('show');
+    // Allow UI to update before processing heavy task
+    setTimeout(() => {
+      performProcessing();
+      ui.processingIndicator.classList.remove('show');
+    }, 10);
+  }
+
+  function performProcessing() {
+    const displayCanvas = state.currentTab === 'original' ? state.originalImageForDisplay : state.currentImage;
+    const zoomLevel = parseInt(ui.scaleSize.value);
+    state.pixelMagnification = zoomLevel;
+
+    if (ui.autoScaleMode.checked && zoomLevel > 1) {
+      state.previewCanvas.width = displayCanvas.width;
+      state.previewCanvas.height = displayCanvas.height;
+      state.previewCanvas.style.cssText = `width: ${displayCanvas.width * zoomLevel}px; height: ${displayCanvas.height * zoomLevel}px;`;
+    } else {
+      state.previewCanvas.width = displayCanvas.width;
+      state.previewCanvas.height = displayCanvas.height;
+      state.previewCanvas.style.cssText = '';
+      state.pixelMagnification = 1;
+    }
+
+    const ctx = state.previewCtx;
+    ctx.clearRect(0, 0, state.previewCanvas.width, state.previewCanvas.height);
+    ctx.drawImage(displayCanvas, 0, 0);
+
+    if (state.currentTab !== 'original') {
+      const options = getProcessingOptions();
+      
+      if (options.showMask) {
+        visualizeDetection(ctx, getBackgroundColor(), options);
+      } else {
+        removeBackgroundWithOptions(ctx, getBackgroundColor(), options);
+      }
+
+      // Draw seed markers visually on the preview
+      if (options.borderOnly && state.seedPoints.length > 0) {
+        ctx.fillStyle = '#ff6b6b';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        for (let pt of state.seedPoints) {
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  /* ================= CORE ALGORITHMS ================= */
+
+  // Perceptual color distance function (Weighted RGB)
+  function getColorDistSq(r1, g1, b1, r2, g2, b2) {
+    const dr = r1 - r2; const dg = g1 - g2; const db = b1 - b2;
+    return (2 * dr * dr) + (4 * dg * dg) + (3 * db * db);
+  }
+
+  function removeBackgroundWithOptions(ctx, bgColor, options) {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    const pixelCount = width * height;
+    
+    // Convert 0-100 tolerance to a weighted squared threshold
+    const mappedTol = (options.tolerance / 100) * 255;
+    const toleranceSq = (2 * mappedTol*mappedTol) + (4 * mappedTol*mappedTol) + (3 * mappedTol*mappedTol);
+
+    const bgPixels = new Uint8Array(pixelCount);
+
+    // 1. Detection
+    if (options.borderOnly) floodFillEdges(data, width, height, bgColor, toleranceSq, bgPixels, state.seedPoints);
+    else identifyPixels(data, bgColor, toleranceSq, bgPixels);
+
+    // 2. Morphology (Separable Dilation - Much faster!)
+    if (options.morphology > 0) applySeparableMorphology(bgPixels, width, height, options.morphology);
+
+    // 3. Edge Distances (Strict 2-pass Manhattan)
+    const edgeDist = new Float32Array(pixelCount);
+    if (options.feather > 0 || options.bilateral > 0 || options.edgeEnhance > 0) {
+      computeDistances(bgPixels, width, height, edgeDist, Math.max(options.feather, options.bilateral));
+    }
+
+    // 4. Transparency & Compositing
+    applyTransparency(data, bgPixels, edgeDist, options, bgColor, width, height);
+    
+    // 5. Post-Process Alpha Smoothing (Box Blur on Alpha Channel)
+    if (options.multisample > 0) applyAlphaBlur(data, width, height, options.multisample);
+
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function identifyPixels(data, bgColor, toleranceSq, bgPixels) {
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b) <= toleranceSq) {
+        bgPixels[idx] = 1;
+      }
+    }
+  }
+
+  function floodFillEdges(data, width, height, bgColor, toleranceSq, bgPixels, seedPoints) {
+    const queue = new Int32Array(width * height);
+    let head = 0, tail = 0;
+    
+    const checkPush = (idx) => {
+      const i = idx * 4;
+      if (!bgPixels[idx] && getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b) <= toleranceSq) {
+        bgPixels[idx] = 1;
+        queue[tail++] = idx;
+      }
+    };
+
+    for (let x = 0; x < width; x++) { checkPush(x); checkPush((height - 1) * width + x); }
+    for (let y = 1; y < height - 1; y++) { checkPush(y * width); checkPush(y * width + width - 1); }
+
+    // Inject custom user seeds
+    if (seedPoints && seedPoints.length > 0) {
+      for (let pt of seedPoints) {
+        const idx = pt.y * width + pt.x;
+        checkPush(idx);
+      }
+    }
+
+    while (head < tail) {
+      const p = queue[head++];
+      const x = p % width; const y = Math.floor(p / width);
+      if (x > 0) checkPush(p - 1);
+      if (x < width - 1) checkPush(p + 1);
+      if (y > 0) checkPush(p - width);
+      if (y < height - 1) checkPush(p + width);
+    }
+  }
+
+  function applySeparableMorphology(bgPixels, width, height, kernelSize) {
+    const radius = Math.floor(kernelSize / 2);
+    const temp = new Uint8Array(width * height);
+    
+    // Horizontal
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let isBg = 0;
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx;
+          if (nx >= 0 && nx < width && bgPixels[y * width + nx]) { isBg = 1; break; }
+        }
+        temp[y * width + x] = isBg;
+      }
+    }
+    // Vertical
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        let isBg = 0;
+        for (let dy = -radius; dy <= radius; dy++) {
+          const ny = y + dy;
+          if (ny >= 0 && ny < height && temp[ny * width + x]) { isBg = 1; break; }
+        }
+        bgPixels[y * width + x] = isBg;
+      }
+    }
+  }
+
+  function computeDistances(bgPixels, width, height, edgeDist, maxDist) {
+    const INF = maxDist + 2;
+    for (let i = 0; i < bgPixels.length; i++) edgeDist[i] = bgPixels[i] ? 0 : INF;
+    
+    // Pass 1: Top-Left -> Bottom-Right
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (edgeDist[idx] > 0) {
+          let minD = edgeDist[idx];
+          if (x > 0) minD = Math.min(minD, edgeDist[idx - 1] + 1);
+          if (y > 0) minD = Math.min(minD, edgeDist[idx - width] + 1);
+          edgeDist[idx] = minD;
+        }
+      }
+    }
+    // Pass 2: Bottom-Right -> Top-Left
+    for (let y = height - 1; y >= 0; y--) {
+      for (let x = width - 1; x >= 0; x--) {
+        const idx = y * width + x;
+        if (edgeDist[idx] > 0) {
+          let minD = edgeDist[idx];
+          if (x < width - 1) minD = Math.min(minD, edgeDist[idx + 1] + 1);
+          if (y < height - 1) minD = Math.min(minD, edgeDist[idx + width] + 1);
+          edgeDist[idx] = minD;
+        }
+      }
+    }
+  }
+
+  function applyTransparency(data, bgPixels, edgeDist, options, bgColor, width, height) {
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (bgPixels[idx]) {
+        data[i + 3] = 0;
+      } else {
+        let alpha = 255;
+        const distance = edgeDist[idx];
+
+        // Cubic Feathering (Smoothstep)
+        if (options.feather > 0 && distance < options.feather) {
+          const t = distance / options.feather;
+          alpha = Math.floor(t * t * (3 - 2 * t) * 255);
+        }
+
+        // True Hue Despill
+        if (options.despill > 0 && alpha < 255) {
+          const blend = alpha / 255;
+          const strength = (options.despill / 100) * (1 - blend);
+          
+          // Push color away from background instead of arbitrary subtract
+          data[i] = Math.max(0, Math.min(255, data[i] + (data[i] - bgColor.r) * strength));
+          data[i+1] = Math.max(0, Math.min(255, data[i+1] + (data[i+1] - bgColor.g) * strength));
+          data[i+2] = Math.max(0, Math.min(255, data[i+2] + (data[i+2] - bgColor.b) * strength));
+        }
+
+        // Edge Enhance
+        if (options.edgeEnhance > 0 && distance > 0 && distance <= 2) {
+          const boost = (1 - distance / 2) * (options.edgeEnhance / 100) * 255;
+          alpha = Math.min(255, alpha + boost);
+        }
+
+        data[i + 3] = alpha;
+      }
+    }
+  }
+
+  function applyAlphaBlur(data, width, height, radius) {
+    const tempAlpha = new Uint8Array(width * height);
+    for(let i = 0; i < data.length; i += 4) tempAlpha[i/4] = data[i+3];
+
+    // Horizontal pass
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0, count = 0;
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx;
+          if (nx >= 0 && nx < width) {
+            sum += tempAlpha[y * width + nx];
+            count++;
+          }
+        }
+        data[(y * width + x) * 4 + 3] = sum / count;
+      }
+    }
+    
+    // Copy back for vertical pass
+    for(let i = 0; i < data.length; i += 4) tempAlpha[i/4] = data[i+3];
+
+    // Vertical pass
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        let sum = 0, count = 0;
+        for (let dy = -radius; dy <= radius; dy++) {
+          const ny = y + dy;
+          if (ny >= 0 && ny < height) {
+            sum += tempAlpha[ny * width + x];
+            count++;
+          }
+        }
+        data[(y * width + x) * 4 + 3] = sum / count;
+      }
+    }
+  }
+
+  function visualizeDetection(ctx, bgColor, options) {
+    const imgData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const bgPixels = new Uint8Array(ctx.canvas.width * ctx.canvas.height);
+    const mappedTol = (options.tolerance / 100) * 255;
+    const toleranceSq = (2 * mappedTol*mappedTol) + (4 * mappedTol*mappedTol) + (3 * mappedTol*mappedTol);
+
+    if (options.borderOnly) floodFillEdges(imgData.data, ctx.canvas.width, ctx.canvas.height, bgColor, toleranceSq, bgPixels, state.seedPoints);
+    else identifyPixels(imgData.data, bgColor, toleranceSq, bgPixels);
+
+    for (let i = 0, idx = 0; i < imgData.data.length; i += 4, idx++) {
+      if (bgPixels[idx]) { imgData.data[i] = 255; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 200; }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 255, g: 255, b: 255 };
+  }
+  function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase(); }
+
+  init();
+</script>
+</body>
+</html>
