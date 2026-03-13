@@ -3,282 +3,829 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Background Remover - Canvas Edition</title>
+  <title>Background Remover Pro</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-    .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden; }
-    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-    header h1 { font-size: 28px; margin-bottom: 8px; }
-    header p { opacity: 0.9; font-size: 14px; }
-    .content { display: grid; grid-template-columns: 1fr 350px; gap: 20px; padding: 30px; }
-    .preview-section { display: flex; flex-direction: column; gap: 20px; }
-    .canvas-container { position: relative; border: 2px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: white; }
-    .canvas-wrapper { position: relative; display: inline-block; width: 100%; }
-    canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: crisp-edges; }
-    .preview-info { font-size: 12px; color: #666; padding: 12px; background: #f5f5f5; border-radius: 6px; }
-    .preview-controls { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 15px; }
-    .controls-panel { background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; flex-direction: column; gap: 20px; max-height: 85vh; overflow-y: auto; }
-    .control-group { display: flex; flex-direction: column; gap: 8px; }
-    .control-group label { font-weight: 600; font-size: 13px; color: #333; display: flex; align-items: center; gap: 6px; }
-    .control-group input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #ddd; outline: none; -webkit-appearance: none; }
-    .control-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #667eea; cursor: pointer; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-    .control-group input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #667eea; cursor: pointer; border: none; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
-    .value-display { font-size: 12px; color: #667eea; font-weight: 600; }
-    .checkbox-group { display: flex; align-items: center; gap: 8px; }
-    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
-    .color-picker-group { display: flex; gap: 8px; align-items: center; }
-    .color-input { width: 50px; height: 40px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; transition: border-color 0.2s; }
-    .color-input:hover { border-color: #667eea; }
-    .color-hex { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; }
-    .button-group { display: flex; gap: 8px; flex-direction: column; }
-    button { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-    .btn-primary { background: #667eea; color: white; }
-    .btn-primary:hover { background: #5568d3; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
-    .btn-secondary { background: #f0f0f0; color: #333; border: 1px solid #ddd; }
-    .btn-secondary:hover { background: #e8e8e8; }
-    .btn-danger { background: #ff6b6b; color: white; }
-    .btn-danger:hover { background: #ff5252; }
-    .btn-success { background: #51cf66; color: white; }
-    .btn-success:hover { background: #40c057; }
-    .file-input-label { display: block; padding: 10px 16px; background: #667eea; color: white; border-radius: 6px; cursor: pointer; text-align: center; font-weight: 600; font-size: 13px; transition: all 0.2s; }
-    .file-input-label:hover { background: #5568d3; }
-    input[type="file"] { display: none; }
-    .info-box { background: #e7f5ff; border-left: 4px solid #667eea; padding: 12px; border-radius: 6px; font-size: 12px; color: #333; line-height: 1.5; }
-    .separator { height: 1px; background: #e0e0e0; margin: 8px 0; }
-    .eyedropper-btn { padding: 6px 8px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
-    .eyedropper-btn:hover { background: #e8e8e8; border-color: #667eea; }
-    .eyedropper-btn.active { background: #667eea; color: white; border-color: #667eea; }
-    @media (max-width: 900px) { .content { grid-template-columns: 1fr; } header h1 { font-size: 22px; } .controls-panel { max-height: none; } }
-    .spinner { display: none; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .spinner.show { display: inline-block; }
-    .tab-buttons { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab-btn { flex: 1; padding: 8px; background: #f0f0f0; border: 2px solid transparent; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
-    .tab-btn.active { background: #667eea; color: white; border-color: #667eea; }
-    .scale-input-group { display: flex; gap: 8px; align-items: center; }
-    .scale-input-group input[type="number"] { flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-    .auto-detect-badge { display: inline-block; background: #51cf66; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 4px; }
-    .processing-indicator { display: none; align-items: center; gap: 8px; padding: 8px 12px; background: #fff3cd; border-left: 3px solid #ffc107; border-radius: 4px; font-size: 12px; color: #333; }
-    .processing-indicator.show { display: flex; }
-    .preview-bg-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
-    .bg-btn { width: 32px; height: 32px; border: 3px solid transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s; position: relative; flex-shrink: 0; }
-    .bg-btn:hover { transform: scale(1.1); border-color: #667eea; }
-    .bg-btn.active { border-color: #333; box-shadow: 0 0 8px rgba(0, 0, 0, 0.3); }
-    .bg-btn[data-bg="transparent"] { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 8px 8px; background-position: 0 0, 0 4px, 4px -4px, -4px 0px; background-color: white; }
-    .bg-btn[data-bg="black"] { background: #000000; } .bg-btn[data-bg="white"] { background: #ffffff; border-color: #999; } .bg-btn[data-bg="red"] { background: #ff6b6b; } .bg-btn[data-bg="green"] { background: #51cf66; } .bg-btn[data-bg="blue"] { background: #4dabf7; } .bg-btn[data-bg="yellow"] { background: #ffd43b; border-color: #999; } .bg-btn[data-bg="purple"] { background: #b197fc; } .bg-btn[data-bg="orange"] { background: #ff922b; } .bg-btn[data-bg="brown"] { background: #8b6f47; }
-    .canvas-bg-wrapper { position: relative; display: inline-block; width: 100%; background-color: white; background-image: none; background-size: auto; background-position: auto; }
-    .canvas-bg-wrapper.transparent { background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; background-color: white; }
-    .section-title { font-size: 12px; font-weight: 600; color: #333; margin-bottom: 8px; margin-top: 4px; }
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg:          #0c0c10;
+    --panel:       #111116;
+    --surface:     #17171e;
+    --surface2:    #1d1d26;
+    --surface3:    #23232e;
+    --border:      #22222e;
+    --border2:     #2c2c3c;
+    --text:        #c8c8d8;
+    --text-dim:    #7878a0;
+    --text-muted:  #454560;
+    --accent:      #4f8ef7;
+    --accent-glow: rgba(79,142,247,.18);
+    --accent-dim:  rgba(79,142,247,.08);
+    --accent-rgb:  79,142,247;
+    --green:       #3ecf8e;
+    --orange:      #f59e0b;
+    --red:         #f16b6b;
+    --radius:      6px;
+    --radius-sm:   4px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+  /* ── App shell ── */
+  .app { display:grid; grid-template-columns:1fr 288px; grid-template-rows:auto 1fr; min-height:100vh; }
+  .app-header { grid-column:1/-1; background:var(--panel); border-bottom:1px solid var(--border); padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .app-title { font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#fff; }
+  .app-sub   { font-size:10px; color:var(--text-muted); font-family:'JetBrains Mono',monospace; margin-top:2px; letter-spacing:.03em; }
+  .header-right { display:flex; align-items:center; gap:10px; }
+
+  /* ── Preview column ── */
+  .preview-area { display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--bg); overflow:hidden; }
+  .tabs { display:flex; gap:4px; }
+  .tab-btn { flex:1; padding:7px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; font-size:11px; font-weight:600; color:var(--text-dim); font-family:'Outfit',sans-serif; transition:all .15s; }
+  .tab-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .tab-btn:hover:not(.active) { border-color:var(--border2); color:var(--text); }
+
+  .canvas-outer { flex:1; position:relative; border:1px solid var(--border); border-radius:var(--radius); overflow:auto; min-height:200px; display:flex; align-items:flex-start; justify-content:flex-start; }
+  .canvas-bg-wrapper { display:inline-block; background-color:#fff; min-width:100%; min-height:100%; }
+  .canvas-bg-wrapper.transparent { background-image:linear-gradient(45deg,#2b2b33 25%,transparent 25%),linear-gradient(-45deg,#2b2b33 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#2b2b33 75%),linear-gradient(-45deg,transparent 75%,#2b2b33 75%); background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0; background-color:#1c1c24; }
+  canvas { display:block; image-rendering:pixelated; image-rendering:crisp-edges; }
+
+  .info-bar { display:flex; align-items:center; gap:16px; padding:7px 12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-size:11px; color:var(--text-dim); flex-wrap:wrap; }
+  .info-bar b { color:var(--text); font-weight:600; }
+
+  .action-strip { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .preview-bg-strip { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .bg-label { font-size:10px; color:var(--text-muted); font-weight:600; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap; }
+  .preview-bg-buttons { display:flex; gap:4px; flex-wrap:wrap; }
+  .bg-btn { width:24px; height:24px; border:2px solid var(--border); border-radius:4px; cursor:pointer; flex-shrink:0; transition:all .15s; }
+  .bg-btn:hover { transform:scale(1.15); border-color:var(--text-dim); }
+  .bg-btn.active { border-color:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  .bg-btn[data-bg=transparent] { background-image:linear-gradient(45deg,#555 25%,transparent 25%),linear-gradient(-45deg,#555 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#555 75%),linear-gradient(-45deg,transparent 75%,#555 75%); background-size:8px 8px; background-position:0 0,0 4px,4px -4px,-4px 0; background-color:#333; }
+  .bg-btn[data-bg=black]  { background:#000; }
+  .bg-btn[data-bg=white]  { background:#fff; border-color:#444; }
+  .bg-btn[data-bg=red]    { background:#f87171; }
+  .bg-btn[data-bg=green]  { background:#4ade80; }
+  .bg-btn[data-bg=blue]   { background:#60a5fa; }
+  .bg-btn[data-bg=yellow] { background:#fde047; border-color:#555; }
+  .bg-btn[data-bg=purple] { background:#c084fc; }
+  .bg-btn[data-bg=orange] { background:#fb923c; }
+  .bg-btn[data-bg=brown]  { background:#78350f; }
+  .zoom-row { display:flex; align-items:center; gap:6px; font-size:11px; }
+  .zoom-row input[type=number] { width:46px; padding:4px 6px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); color:var(--text); font-size:12px; font-family:'JetBrains Mono',monospace; text-align:center; }
+  .zoom-row input[type=number]:focus { outline:none; border-color:var(--accent); }
+
+  /* ── Buttons ── */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border:none; border-radius:var(--radius); font-family:'Outfit',sans-serif; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; white-space:nowrap; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { filter:brightness(1.12); box-shadow:0 0 18px rgba(var(--accent-rgb),.3); }
+  .btn-success { background:var(--green); color:#0a1a12; }
+  .btn-success:hover { filter:brightness(1.08); }
+  .btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border2); }
+  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-sm { padding:5px 10px; font-size:11px; }
+
+  /* ── Processing indicator ── */
+  .proc-indicator { display:none; align-items:center; gap:7px; padding:5px 10px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); font-size:11px; color:var(--orange); }
+  .proc-indicator.show { display:flex; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .proc-indicator::before { content:''; width:10px; height:10px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; }
+
+  /* ── Sidebar ── */
+  .sidebar { background:var(--panel); border-left:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+  .sidebar-top { padding:12px 14px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:7px; }
+  .file-label { display:block; padding:8px; background:var(--surface); border:1px dashed var(--border2); border-radius:var(--radius); cursor:pointer; text-align:center; font-weight:600; font-size:12px; color:var(--text-dim); transition:all .15s; }
+  .file-label:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  input[type=file] { display:none; }
+  .sidebar-scroll { flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--border2) transparent; }
+  .sidebar-scroll::-webkit-scrollbar { width:3px; }
+  .sidebar-scroll::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+
+  /* ── Accordion ── */
+  details.section { border-bottom:1px solid var(--border); }
+  details.section > summary { list-style:none; padding:10px 14px; cursor:pointer; display:flex; align-items:center; gap:7px; user-select:none; transition:background .12s; }
+  details.section > summary::-webkit-details-marker { display:none; }
+  details.section > summary:hover { background:var(--surface); }
+  .sec-icon  { font-size:12px; width:16px; text-align:center; flex-shrink:0; }
+  .sec-title { font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); flex:1; }
+  .sec-badge { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--accent); background:var(--accent-dim); padding:1px 5px; border-radius:8px; display:none; font-weight:600; }
+  .sec-badge.has-active { display:inline-block; }
+  .sec-arrow { font-size:11px; color:var(--text-muted); transition:transform .18s; }
+  details[open] > summary .sec-arrow { transform:rotate(90deg); }
+  .section-body { padding:10px 14px 14px; display:flex; flex-direction:column; gap:9px; }
+
+  /* ── Control primitives ── */
+  .ctrl { display:flex; flex-direction:column; gap:4px; }
+  .ctrl-row { display:flex; align-items:center; gap:7px; }
+
+  /* Toggle switch */
+  .toggle { display:flex; align-items:center; gap:9px; cursor:pointer; }
+  .toggle input[type=checkbox] { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+  .sw { flex-shrink:0; width:28px; height:16px; background:var(--surface3); border:1px solid var(--border2); border-radius:8px; position:relative; transition:background .15s, border-color .15s; }
+  .sw::after { content:''; position:absolute; width:10px; height:10px; background:var(--text-muted); border-radius:50%; top:2px; left:2px; transition:transform .15s, background .15s; }
+  .toggle input:checked ~ .sw { background:var(--accent-dim); border-color:var(--accent); }
+  .toggle input:checked ~ .sw::after { transform:translateX(12px); background:var(--accent); }
+  .toggle-lbl { font-size:12px; font-weight:500; color:var(--text); flex:1; line-height:1.2; }
+
+  /* Slider row */
+  .sl-row { display:flex; align-items:center; gap:6px; }
+  .sl-lbl { font-size:10px; color:var(--text-dim); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sl-val { font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--accent); font-weight:600; min-width:28px; text-align:right; flex-shrink:0; }
+  .sl-unit { font-size:9px; color:var(--text-muted); flex-shrink:0; }
+  input[type=range] { flex:1; height:3px; background:var(--surface3); border-radius:2px; outline:none; -webkit-appearance:none; cursor:pointer; min-width:0; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:13px; height:13px; border-radius:50%; background:var(--accent); cursor:pointer; box-shadow:0 0 0 2px var(--accent-glow); }
+  input[type=range]::-moz-range-thumb { width:13px; height:13px; border-radius:50%; background:var(--accent); cursor:pointer; border:none; }
+
+  /* Sub-controls — hidden until parent enabled */
+  .sub { display:none; flex-direction:column; gap:6px; padding:8px 10px; background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); margin-top:2px; }
+  .sub.open { display:flex; }
+
+  /* Color row */
+  .color-row { display:flex; align-items:center; gap:6px; }
+  input[type=color] { width:30px; height:26px; border:1px solid var(--border2); border-radius:var(--radius-sm); cursor:pointer; background:none; padding:2px; flex-shrink:0; }
+  input[type=color]:hover { border-color:var(--accent); }
+  .hex-inp { flex:1; padding:5px 8px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text); min-width:0; }
+  .hex-inp:focus { outline:none; border-color:var(--accent); }
+  .icon-btn { padding:4px 8px; background:var(--surface2); border:1px solid var(--border2); border-radius:var(--radius-sm); cursor:pointer; font-size:12px; transition:all .12s; color:var(--text); flex-shrink:0; }
+  .icon-btn:hover { border-color:var(--accent); background:var(--accent-dim); }
+  .icon-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  /* Auto badge */
+  .auto-badge { font-size:9px; font-family:'JetBrains Mono',monospace; background:var(--green); color:#0a1a12; padding:1px 5px; border-radius:8px; font-weight:700; letter-spacing:.04em; }
+  /* Hint text */
+  .hint { font-size:10px; color:var(--text-muted); line-height:1.45; }
+  /* Inner separator */
+  .sep { height:1px; background:var(--border); }
+  /* Small label */
+  .lbl { font-size:10px; color:var(--text-dim); font-weight:500; }
+
+  /* Sample swatches */
+  .swatches { display:flex; flex-wrap:wrap; gap:3px; margin-top:2px; }
+  .sample-swatch { width:20px; height:20px; border-radius:3px; border:2px solid rgba(255,255,255,.1); cursor:pointer; position:relative; flex-shrink:0; transition:border-color .12s; }
+  .sample-swatch:hover { border-color:var(--red); }
+  .sample-swatch:hover::after { content:'✕'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; background:rgba(0,0,0,.65); color:#fff; border-radius:1px; }
+
+  /* Zone list */
+  .zone-list { display:flex; flex-direction:column; gap:4px; }
+  .zone-item { display:flex; align-items:center; gap:4px; padding:4px 7px; background:var(--bg); border-radius:3px; border:1px solid var(--border); font-size:10px; }
+  .zone-item input[type=range] { flex:1; }
+  .zone-color { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+  .zone-remove { background:none; border:none; cursor:pointer; font-size:11px; padding:0 2px; color:var(--text-muted); transition:color .12s; }
+  .zone-remove:hover { color:var(--red); }
+  .zone-tol-label { font-size:9px; font-family:'JetBrains Mono',monospace; color:var(--accent); min-width:20px; text-align:right; font-weight:600; }
+
+  /* Dir-tol redesign */
+  .dir-tol-block { display:flex; flex-direction:column; gap:6px; padding:8px 10px; background:var(--surface2); border-radius:var(--radius); border:1px solid var(--border); }
+  .dir-tol-header { display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600; }
+  .dir-plus  { color:var(--green); font-size:11px; }
+  .dir-minus { color:var(--red);   font-size:11px; }
+  .dir-tol-header .sl-unit { margin-left:auto; }
+  .dir-grad { height:10px; border-radius:3px; flex:1; min-width:40px; border:1px solid rgba(255,255,255,.07); }
+  .dir-controls { display:flex; align-items:center; gap:5px; }
+  .dir-controls input[type=color] { width:26px; height:22px; flex-shrink:0; }
+  .dir-controls input[type=range] { flex:1; }
+  .dir-controls .sl-val { min-width:24px; text-align:right; }
+
+  /* Tooltip */
+  #tooltip { position:fixed; z-index:9999; max-width:240px; padding:10px 12px; background:#0d0d14; border:1px solid rgba(255,255,255,.12); border-radius:7px; box-shadow:0 6px 28px rgba(0,0,0,.75); pointer-events:none; opacity:0; transition:opacity .12s; font-family:'Outfit',sans-serif; }
+  #tooltip.visible { opacity:1; }
+  #tooltip .tt-title { font-size:12px; font-weight:700; color:#ffffff; margin-bottom:5px; line-height:1.3; }
+  #tooltip .tt-body  { font-size:11px; color:#c8c8d8; line-height:1.6; }
+  #tooltip .tt-low   { margin-top:7px; font-size:10px; color:#9898b8; border-top:1px solid rgba(255,255,255,.1); padding-top:6px; line-height:1.5; }
+
+  /* ── Chroma Key ── */
+  #chromaKeyBar { width:100%; height:20px; border-radius:3px; display:block; cursor:default; }
+
+  /* ── Magic Wand / Analysis Card ── */
+  .wand-btn { width:100%; justify-content:center; background:linear-gradient(135deg,#6366f1,#4f8ef7); color:#fff; border:none; letter-spacing:.03em; }
+  .wand-btn:hover { filter:brightness(1.18); box-shadow:0 0 22px rgba(99,102,241,.4); }
+
+  /* Responsive */
+  @media (max-width:860px) {
+    .app { grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
+    .app-header { grid-column:1; }
+    .sidebar { border-left:none; border-top:1px solid var(--border); max-height:50vh; }
+  }
   </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>🎨 Background Remover Pro</h1>
-    <p>Advanced edge detection & smoothing with multiple enhancement techniques</p>
+<div class="app">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div>
+      <div class="app-title">Background Remover Pro</div>
+      <div class="app-sub">color-aware alpha matting · sobel edge barrier · gaussian smoothing · alpha unmixing</div>
+    </div>
+    <div class="header-right">
+      <div class="proc-indicator" id="processingIndicator">Processing…</div>
+    </div>
   </header>
 
-  <div class="content">
-    <div class="preview-section">
-      <div class="tab-buttons">
-        <button class="tab-btn active" data-tab="preview">Preview</button>
-        <button class="tab-btn" data-tab="original">Original</button>
+  <!-- Preview -->
+  <main class="preview-area">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="preview">Preview</button>
+      <button class="tab-btn" data-tab="original">Original</button>
+    </div>
+
+    <div class="canvas-outer" id="previewContainer">
+      <div class="canvas-bg-wrapper transparent" id="canvasBgWrapper">
+        <canvas id="previewCanvas"></canvas>
       </div>
+    </div>
 
-      <div class="canvas-container" id="previewContainer">
-        <div class="canvas-bg-wrapper transparent" id="canvasBgWrapper">
-          <div class="canvas-wrapper">
-            <canvas id="previewCanvas"></canvas>
-          </div>
-        </div>
+    <div class="info-bar">
+      <span><b>Size:</b> <span id="imageDim">—</span></span>
+      <span><b>BG Color:</b> <span id="bgColor">#FFFFFF</span></span>
+    </div>
+
+    <div class="preview-bg-strip">
+      <span class="bg-label">Preview BG</span>
+      <div class="preview-bg-buttons">
+        <button class="bg-btn active" data-bg="transparent" title="Transparent"></button>
+        <button class="bg-btn" data-bg="black"   title="Black"></button>
+        <button class="bg-btn" data-bg="white"   title="White"></button>
+        <button class="bg-btn" data-bg="red"     title="Red"></button>
+        <button class="bg-btn" data-bg="green"   title="Green"></button>
+        <button class="bg-btn" data-bg="blue"    title="Blue"></button>
+        <button class="bg-btn" data-bg="yellow"  title="Yellow"></button>
+        <button class="bg-btn" data-bg="purple"  title="Purple"></button>
+        <button class="bg-btn" data-bg="orange"  title="Orange"></button>
+        <button class="bg-btn" data-bg="brown"   title="Brown"></button>
       </div>
+    </div>
 
-      <div class="preview-info">
-        <div><strong>Image Dimensions:</strong> <span id="imageDim">-</span></div>
-        <div><strong>Auto Detected Background:</strong> <span id="bgColor">#FFFFFF</span></div>
-        <div style="margin-top: 8px; font-size: 11px; color: #999;">Real-time processing with multiple edge enhancement techniques</div>
+    <div class="action-strip">
+      <label class="toggle" data-tip-title="Pixel Zoom" data-tip-body="Magnifies the preview canvas to check edge quality at the pixel level. Does not affect the exported image." data-tip-low="Useful for verifying edge sharpness and fringe removal at full resolution." style="flex:none;">
+        <input type="checkbox" id="autoScaleMode">
+        <span class="sw"></span>
+        <span class="toggle-lbl" style="font-size:11px;">Pixel zoom</span>
+      </label>
+      <div class="zoom-row">
+        <input type="number" id="scaleSize" data-tip-title="Zoom Level" data-tip-body="Preview magnification factor (1–4×)." data-tip-low="4× is useful for inspecting individual edge pixels." value="1" min="1" max="4" step="1">
+        <span class="lbl">×</span>
       </div>
+      <div style="flex:1;"></div>
+      <button class="btn btn-success btn-sm" id="downloadBtn" data-tip-title="Export PNG" data-tip-body="Processes the full-resolution original image with current settings and downloads it as a transparent PNG." data-tip-low="Always exports at full original resolution regardless of preview zoom.">⬇ Export PNG</button>
+      <button class="btn btn-ghost  btn-sm" id="resetBtn" data-tip-title="Reset" data-tip-body="Clears all seed points, extra samples, and tolerance zones. Settings remain unchanged." data-tip-low="Does not reset sliders or toggles — only resets interactive canvas data.">↺ Reset</button>
+    </div>
+  </main>
 
-      <div class="processing-indicator" id="processingIndicator">
-        <div class="spinner"></div>
-        <span>Processing image...</span>
-      </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <label for="imageInput" class="file-label">📂 Load Image</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <button class="btn wand-btn btn-sm" id="smartRemoveBtn"
+        data-tip-title="Smart Remove 🪄"
+        data-tip-body="Analyses the image — background noise, hair likelihood, edge quality, saturation — and automatically configures all settings for the best result."
+        data-tip-low="All sliders are set to their optimal values. You can then fine-tune manually.">🪄 Smart Remove</button>
+    </div>
 
-      <div class="preview-controls">
-        <div class="control-group">
-          <label>Preview Background</label>
-          <div class="preview-bg-buttons">
-            <button class="bg-btn active" data-bg="transparent" title="Transparent"></button>
-            <button class="bg-btn" data-bg="black" title="Black"></button>
-            <button class="bg-btn" data-bg="white" title="White"></button>
-            <button class="bg-btn" data-bg="red" title="Red"></button>
-            <button class="bg-btn" data-bg="green" title="Green"></button>
-            <button class="bg-btn" data-bg="blue" title="Blue"></button>
-            <button class="bg-btn" data-bg="yellow" title="Yellow"></button>
-            <button class="bg-btn" data-bg="purple" title="Purple"></button>
-            <button class="bg-btn" data-bg="orange" title="Orange"></button>
-            <button class="bg-btn" data-bg="brown" title="Brown"></button>
-          </div>
-        </div>
+    <div class="sidebar-scroll">
 
-        <div class="control-group">
-          <label>
-            <div class="checkbox-group">
-              <input type="checkbox" id="autoScaleMode">
-              <span>Magnify Preview (Pixel Perfect)</span>
+      <!-- ══ 1. Detection ══ -->
+      <details class="section" open>
+        <summary>
+          <span class="sec-icon">🎯</span>
+          <span class="sec-title">Detection</span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="ctrl">
+            <div class="ctrl-row">
+              <span class="lbl">Background Color</span>
+              <span class="auto-badge" id="autoBadge" style="display:none;">AUTO</span>
             </div>
-          </label>
-          <div class="scale-input-group">
-            <label style="font-size: 12px; font-weight: 500; width: 80px;">Zoom Level:</label>
-            <input type="number" id="scaleSize" value="1" min="1" max="4" step="1">
-            <span style="font-size: 11px; color: #999;">x</span>
+            <div class="color-row">
+              <input type="color" id="bgColorPicker" data-tip-title="Background Color" data-tip-body="The primary color to remove. Auto-detected from image edges on load. Click the eyedropper 🎯 to pick from the image instead." data-tip-low="Use the hex field or color picker to fine-tune. The AUTO badge shows when auto-detection is active." value="#ffffff">
+              <input type="text"  id="bgColorHex" data-tip-title="Background Color (hex)" data-tip-body="Type a hex color code manually, or update it via the color picker or eyedropper." data-tip-low="Accepts #RRGGBB format. Updates instantly on valid 6-digit hex." class="hex-inp" value="#FFFFFF">
+              <button class="icon-btn" id="eyedropperBtn" data-tip-title="Primary color eyedropper" data-tip-body="Click then click anywhere on the preview image to sample the background color from that exact pixel." data-tip-low="Best used on a clear, unambiguous background area." title="Pick background color from image">🎯</button>
+            </div>
+            <div class="ctrl-row" style="margin-top:4px;">
+              <span class="lbl">Extra BG samples</span>
+              <button class="icon-btn" id="addSampleBtn" data-tip-title="Add extra background sample" data-tip-body="Sample additional background colors. A pixel is detected as background if it matches ANY sample — useful for gradients, shadows, or lighting variation." data-tip-low="Click the swatch to remove it. You can add multiple samples." title="Add extra background color sample">＋🎯</button>
+            </div>
+            <div class="swatches" id="sampleSwatches"></div>
+          </div>
+
+          <div class="sep"></div>
+
+          <!-- Chroma Key Mode -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Chroma Key Mode 🎬" data-tip-body="Removes pixels by hue range instead of (or in addition to) color distance. Works like a professional chroma keyer — ideal for green screen, blue screen, or any vivid single-color background." data-tip-low="Combine with flood-fill (Edges Only) for clean results. The hue range is additive — a pixel is removed if it matches the color distance OR the hue range.">
+              <input type="checkbox" id="enableChromaKey">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🎬 Chroma Key Mode</span>
+            </label>
+            <div class="sub" id="sub-chroma-key">
+              <canvas id="chromaKeyBar" height="20"
+                data-tip-title="Hue selection bar"
+                data-tip-body="Shows the full color spectrum. The highlighted band is the hue range that will be removed. Drag the sliders below to move or resize it."></canvas>
+              <div class="sl-row" style="margin-top:4px;">
+                <span class="sl-lbl">Hue Center</span>
+                <span class="sl-val" id="chromaHueCenterValue">120</span>
+                <span class="sl-unit">°</span>
+              </div>
+              <input type="range" id="chromaHueCenter" min="0" max="359" value="120" step="1"
+                data-tip-title="Hue Center"
+                data-tip-body="The center hue angle to remove (0=red, 60=yellow, 120=green, 180=cyan, 240=blue, 300=magenta)."
+                data-tip-low="Set this to match your background color. Smart Remove sets it automatically.">
+              <div class="sl-row">
+                <span class="sl-lbl">Range ±</span>
+                <span class="sl-val" id="chromaHueRangeValue">30</span>
+                <span class="sl-unit">°</span>
+              </div>
+              <input type="range" id="chromaHueRange" min="5" max="90" value="30" step="1"
+                data-tip-title="Hue Range"
+                data-tip-body="Half-width of the hue band. Total removal range is 2× this value."
+                data-tip-low="Higher = wider hue band removed (risks eating subject). Lower = tighter, more precise. 30° is a good starting point for clean green screen.">
+              <div class="sl-row">
+                <span class="sl-lbl">Min Saturation</span>
+                <span class="sl-val" id="chromaSatMinValue">20</span>
+              </div>
+              <input type="range" id="chromaSatMin" min="0" max="80" value="20" step="1"
+                data-tip-title="Minimum Saturation Gate"
+                data-tip-body="Pixels below this saturation level are NOT removed by chroma key, even if their hue matches. Protects white/gray areas in the subject."
+                data-tip-low="Higher = stricter saturation requirement (safer for subjects with near-neutral tones). 0 = remove all hue matches regardless of saturation.">
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Detect from Edges Only" data-tip-body="ON: flood fill from image borders — only removes background pixels connected to the edge. Protects identical colors inside the subject. OFF: removes all matching pixels anywhere in the image." data-tip-low="Usually keep ON. Turn OFF only if the background is completely surrounded by the subject.">
+              <input type="checkbox" id="borderOnlyMode" checked>
+              <span class="sw"></span>
+              <span class="toggle-lbl">Detect from Edges Only</span>
+            </label>
+            <div class="hint" style="margin-top:3px;">Only removes background pixels connected to image borders.</div>
+            <button class="btn btn-ghost btn-sm" id="seedPickerBtn" data-tip-title="Custom Seed Points" data-tip-body="Add additional flood fill starting points. Useful when background regions don't touch the image border (e.g. a background visible through a hole in the subject)." data-tip-low="Click the button, then click the canvas. Click an existing point to remove it." style="margin-top:6px;width:100%;justify-content:center;">📍 Edit Seed Points</button>
+          </div>
+
+        </div>
+      </details>
+
+      <!-- ══ 2. Tolerance ══ -->
+      <details class="section" open>
+        <summary>
+          <span class="sec-icon">🎚</span>
+          <span class="sec-title">Tolerance</span>
+          <span class="sec-badge" id="badge-tolerance"></span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="ctrl">
+            <div class="sl-row">
+              <span class="sl-lbl">Color Tolerance</span>
+              <span class="sl-val" id="toleranceValue">4</span>
+            </div>
+            <input type="range" id="tolerance" data-tip-title="Color Tolerance" data-tip-body="How different a pixel's color can be from the background and still count as background." data-tip-low="Higher = removes more (risks eating subject). Lower = more precise (may leave fringe). Start low and increase until the background disappears." min="0" max="100" value="4">
+          </div>
+
+          <div class="sep"></div>
+
+          <!-- Adaptive -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Adaptive Tolerance" data-tip-body="Automatically widens tolerance where the background has local color variation or noise. A texture analysis pass measures variance per pixel and scales tolerance proportionally." data-tip-low="Cannot combine with Color Spreading. Use on textured or noisy backgrounds.">
+              <input type="checkbox" id="enableAdaptive">
+              <span class="sw"></span>
+              <span class="toggle-lbl">📈 Adaptive Tolerance</span>
+            </label>
+            <div class="sub" id="sub-adaptive">
+              <div class="sl-row">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="adaptiveStrengthValue">8</span>
+                <span class="sl-unit">×</span>
+              </div>
+              <input type="range" id="adaptiveStrength" data-tip-title="Adaptive Strength" data-tip-body="Maximum multiplier applied in the noisiest areas." data-tip-low="Higher = more permissive in variable regions, may bleed into subject. Lower = stays closer to the base tolerance everywhere." min="1" max="15" value="8" step="0.5">
+            </div>
+          </div>
+
+          <!-- Color Spreading (mutex with adaptive) -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Color Spreading" data-tip-body="Each accepted background pixel passes its own color as the reference for its neighbors instead of the original background. The fill 'drifts' — great for gradients and vignettes." data-tip-low="Cannot combine with Adaptive Tolerance. Works in Edges Only mode only.">
+              <input type="checkbox" id="enableColorSpread">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🌊 Color Spreading</span>
+            </label>
+          </div>
+
+          <!-- Edge Barrier -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Edge Detection Barrier" data-tip-body="Runs Sobel edge detection before flood fill. Any pixel whose gradient magnitude exceeds the threshold acts as an impassable wall — preventing the fill from crossing sharp image boundaries." data-tip-low="Use when color-similar background bleeds into the subject.">
+              <input type="checkbox" id="enableEdgeBarrier">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🚧 Edge Detection Barrier</span>
+            </label>
+            <div class="sub" id="sub-edge-barrier">
+              <div class="sl-row">
+                <span class="sl-lbl">Threshold</span>
+                <span class="sl-val" id="edgeBarrierValue">60</span>
+              </div>
+              <input type="range" id="edgeBarrier" data-tip-title="Edge Barrier Threshold" data-tip-body="Sobel gradient magnitude above which a pixel blocks flood fill propagation." data-tip-low="Lower = more edges act as walls (protective, but may also block valid background). Higher = only very sharp edges stop the fill." min="5" max="300" value="60" step="5">
+            </div>
+          </div>
+
+          <!-- Directional Tolerance -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Directional Tolerance" data-tip-body="Makes tolerance asymmetric in color space. You can widen it toward one color direction (MORE — catch more background) and narrow it in another (LESS — protect subject colors)." data-tip-low="Example: white BG → boost toward light gray (catches tinted BG), weaken toward yellow (protects yellow subject).">
+              <input type="checkbox" id="enableDirTol">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🎨 Directional Tolerance</span>
+            </label>
+            <div class="sub" id="sub-dir-tol">
+              <div class="dir-tol-block"
+                data-tip-title="MORE tolerant toward"
+                data-tip-body="Pixels that fall between the background and this color match more easily. Pick a color that bleeds into the background area you want to remove — e.g. if your white BG has a warm tint, pick a light warm gray."
+                data-tip-low="Higher multiplier = the tolerance widens more strongly in this color direction.">
+                <div class="dir-tol-header">
+                  <span class="dir-plus">✅</span>
+                  <span style="color:var(--green);">MORE tolerant toward</span>
+                  <span class="sl-unit" style="margin-left:auto;">
+                    <span class="sl-val" id="dirBoostStrengthValue">2.0</span>×
+                  </span>
+                </div>
+                <div id="dirBoostGrad" class="dir-grad"></div>
+                <div class="dir-controls">
+                  <input type="color" id="dirBoostColor" value="#808080"
+                    data-tip-title="Boost color target"
+                    data-tip-body="Pick the color direction you want to be more lenient toward. The algorithm measures how much each pixel 'points toward' this color from the background — and widens tolerance proportionally."
+                    data-tip-low="Use the eyedropper on a slightly off-background area to find the right direction.">
+                  <input type="range" id="dirBoostStrength" min="1" max="6" value="2" step="0.1"
+                    data-tip-title="Boost strength"
+                    data-tip-body="Multiplier applied to tolerance for pixels aligned with the boost direction."
+                    data-tip-low="1× = no effect. 6× = extremely permissive toward that color. Start around 2–3×.">
+                </div>
+              </div>
+              <div class="dir-tol-block"
+                data-tip-title="LESS tolerant toward"
+                data-tip-body="Pixels that fall between the background and this color match harder. Use to protect subject colors that are dangerously similar to the background — e.g. yellow subject on a near-white background."
+                data-tip-low="Lower multiplier = tolerance shrinks more strongly, protecting that color direction.">
+                <div class="dir-tol-header">
+                  <span class="dir-minus">🚫</span>
+                  <span style="color:var(--red);">LESS tolerant toward</span>
+                  <span class="sl-unit" style="margin-left:auto;">
+                    <span class="sl-val" id="dirWeakenStrengthValue">0.3</span>×
+                  </span>
+                </div>
+                <div id="dirWeakenGrad" class="dir-grad"></div>
+                <div class="dir-controls">
+                  <input type="color" id="dirWeakenColor" value="#ffff00"
+                    data-tip-title="Weaken color target"
+                    data-tip-body="Pick a color that's on the edge of being confused with the background — the algorithm will tighten tolerance in that direction to avoid removing it."
+                    data-tip-low="Choose colors that appear on your subject near the background boundary.">
+                  <input type="range" id="dirWeakenStrength" min="0.05" max="1" value="0.3" step="0.05"
+                    data-tip-title="Weaken strength"
+                    data-tip-body="How much the tolerance is reduced in the weaken direction."
+                    data-tip-low="0.05× = nearly blocks all removal in that direction. 1× = no weakening.">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tolerance Zones -->
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Tolerance Zones" data-tip-body="Draw rectangular regions on the canvas, each with its own tolerance override. Useful when one part of the background needs higher tolerance than another." data-tip-low="Zone tolerance completely replaces the global tolerance for pixels inside. Adjust per-zone with the slider in the zone list.">
+              <input type="checkbox" id="enableZones">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🖌 Tolerance Zones</span>
+            </label>
+            <div class="sub" id="sub-zones">
+              <button class="btn btn-ghost btn-sm" id="zoneDrawBtn" data-tip-title="Draw Zone" data-tip-body="Click, then click-drag a rectangle on the preview canvas to define a tolerance zone." data-tip-low="Draw mode exits automatically after each zone. Zones are shown as colored outlines with their tolerance label." style="width:100%;justify-content:center;">✏️ Draw Zone</button>
+              <div class="zone-list" id="zoneList"></div>
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <!-- ══ 3. Edge Refinement ══ -->
+      <details class="section">
+        <summary>
+          <span class="sec-icon">✂️</span>
+          <span class="sec-title">Edge Refinement</span>
+          <span class="sec-badge" id="badge-edge"></span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Smart Fringe Trim" data-tip-body="After the main detection pass, trims pixels near the detected edge that still closely resemble the background color. Removes the thin 'halo' of background color that often clings to subject edges." data-tip-low="Applied after Gaussian blur. ON by default — rarely a reason to turn off.">
+              <input type="checkbox" id="enableSmartTrim" checked>
+              <span class="sw"></span>
+              <span class="toggle-lbl">✂️ Smart Fringe Trim</span>
+            </label>
+            <div class="sub" id="sub-smart-trim">
+              <div class="sl-row">
+                <span class="sl-lbl">Reach</span>
+                <span class="sl-val" id="smartTrimValue">1</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="smartTrim" data-tip-title="Trim Reach" data-tip-body="How many pixels inward from the detected edge to search for background-colored fringe." data-tip-low="Higher = removes more fringe, but risks cutting into the subject edge. Keep at 1–3 for most images." min="1" max="12" value="1">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Sensitivity</span>
+                <span class="sl-val" id="smartTrimSensValue">100</span>
+                <span class="sl-unit">%</span>
+              </div>
+              <input type="range" id="smartTrimSens" data-tip-title="Trim Sensitivity" data-tip-body="How closely a pixel must match the background to be cut by Smart Trim." data-tip-low="Higher % = more aggressive — removes subtle fringe. Lower % = only removes obvious fringe. 100% = matches the global tolerance exactly." min="50" max="500" value="100" step="10">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Alpha Unmixing" data-tip-body="Mathematically separates the foreground color from background contamination in semi-transparent edge pixels using: Fg = (C − (1−α)·Bg) / α. Corrects the actual RGB of edge pixels so they don't show background tinting." data-tip-low="ON by default. Essential for clean color at edges. If edges look washed out, reduce Strength.">
+              <input type="checkbox" id="enableAlphaUnmix" checked>
+              <span class="sw"></span>
+              <span class="toggle-lbl">🎨 Alpha Unmixing</span>
+            </label>
+            <div class="sub" id="sub-alpha-unmix">
+              <div class="sl-row">
+                <span class="sl-lbl">Reach</span>
+                <span class="sl-val" id="alphaUnmixReachValue">2</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="alphaUnmixReach" data-tip-title="Unmix Reach" data-tip-body="How many pixels from the edge boundary to apply color unmixing." data-tip-low="Higher = corrects color further into the image interior. Keep low (1–3) to avoid over-correcting visually obvious pixels." min="1" max="12" value="2">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="alphaUnmixStrengthValue">100</span>
+                <span class="sl-unit">%</span>
+              </div>
+              <input type="range" id="alphaUnmixStrength" data-tip-title="Unmix Strength" data-tip-body="How strongly to apply the mathematical color separation." data-tip-low="Higher = more aggressive color shift. Lower = softer correction. Values above 200% may over-saturate edge colors." min="10" max="300" value="100" step="10">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Gaussian Edge Smoothing" data-tip-body="Blurs alpha values in premultiplied alpha space, limited to the edge zone. Softens jagged or stepped alpha transitions." data-tip-low="Applied before Smart Trim and Alpha Unmixing. Use for anti-aliased soft edges.">
+              <input type="checkbox" id="enableMultisample">
+              <span class="sw"></span>
+              <span class="toggle-lbl">📊 Gaussian Edge Smoothing</span>
+            </label>
+            <div class="sub" id="sub-gaussian">
+              <div class="sl-row">
+                <span class="sl-lbl">Sigma</span>
+                <span class="sl-val" id="multisampleValue">0.5</span>
+              </div>
+              <input type="range" id="multisample" data-tip-title="Gaussian Sigma" data-tip-body="Controls the blur kernel radius. Larger sigma = wider, softer blend." data-tip-low="Higher = more blending, softer edge. Lower (0.1–0.5) = subtle anti-aliasing only. Values above 2 may noticeably soften the edge." min="0.1" max="5" value="0.5" step="0.1">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Reach</span>
+                <span class="sl-val" id="gaussianReachValue">3</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="gaussianReach" data-tip-title="Gaussian Reach" data-tip-body="Maximum pixel distance from the detected edge where the blur is applied." data-tip-low="Higher = blur zone extends further from the edge. Lower = tightly contained to the immediate edge pixels." min="1" max="20" value="3">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Soft Feathering" data-tip-body="Gradually fades alpha from opaque to transparent using distance from the detected edge boundary. Creates a smooth vignette-style fade." data-tip-low="Use for images that will be composited over a background. Produces a natural soft edge.">
+              <input type="checkbox" id="enableFeather">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🔄 Soft Feathering</span>
+            </label>
+            <div class="sub" id="sub-feather">
+              <div class="sl-row">
+                <span class="sl-lbl">Radius</span>
+                <span class="sl-val" id="featherValue">3</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="feather" data-tip-title="Feather Radius" data-tip-body="Width of the fade zone in pixels." data-tip-low="Higher = wider, softer fade. Lower = harder edge that fades quickly. 0 = off." min="0" max="25" value="3">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Color-Aware Matting" data-tip-body="Adjusts alpha of edge pixels based on how much their color resembles the background. Pixels that look like the background get pushed toward transparent, giving a more accurate alpha matte." data-tip-low="Complements feathering. Works best when edge pixels have visually mixed colors.">
+              <input type="checkbox" id="enableColorPull">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🎯 Color-Aware Matting</span>
+            </label>
+            <div class="sub" id="sub-color-pull">
+              <div class="sl-row">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="colorPullValue">70</span>
+              </div>
+              <input type="range" id="colorPull" data-tip-title="Matting Strength" data-tip-body="How strongly color similarity to the background pulls edge alpha toward transparent." data-tip-low="Higher = more aggressive — may over-thin genuine subject edges. Lower = subtle refinement only." min="0" max="100" value="70">
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <!-- ══ 4. Cleanup ══ -->
+      <details class="section">
+        <summary>
+          <span class="sec-icon">🧹</span>
+          <span class="sec-title">Cleanup</span>
+          <span class="sec-badge" id="badge-cleanup"></span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Defringe (Color Correction)" data-tip-body="Shifts the hue of edge pixels away from the background color, removing 'spill' — the green/white/colored tint that background light reflects onto the subject's border." data-tip-low="Especially useful for green screen, white studio backgrounds, or any strongly colored background.">
+              <input type="checkbox" id="enableDespill">
+              <span class="sw"></span>
+              <span class="toggle-lbl">💧 Defringe (Color Correction)</span>
+            </label>
+            <div class="sub" id="sub-despill">
+              <div class="sl-row">
+                <span class="sl-lbl">Amount</span>
+                <span class="sl-val" id="despillValue">60</span>
+              </div>
+              <input type="range" id="despill" data-tip-title="Defringe Amount" data-tip-body="How strongly edge colors are shifted away from the background hue." data-tip-low="Higher = more aggressive — may visibly alter edge pixel colors. Lower = subtle hue correction only." min="0" max="100" value="60">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Mask Dilation" data-tip-body="Expands (dilates) the detected background mask outward by a set number of pixels before alpha is computed. Erodes the subject boundary slightly — effective at removing thin persistent fringe." data-tip-low="Use as a last resort when fringe remains after other methods.">
+              <input type="checkbox" id="enableMorphology">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🔷 Mask Dilation</span>
+            </label>
+            <div class="sub" id="sub-morphology">
+              <div class="sl-row">
+                <span class="sl-lbl">Kernel size</span>
+                <span class="sl-val" id="morphValue">2</span>
+              </div>
+              <input type="range" id="morphology" data-tip-title="Dilation Kernel Size" data-tip-body="How many pixels the background mask expands outward." data-tip-low="Higher = more erosion of the subject boundary. Keep at 1–3. Larger values will visibly shrink the subject." min="1" max="7" value="2" step="1">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Bilateral Filter (Slow)" data-tip-body="Edge-preserving smoothing on the alpha channel. Averages alpha in uniform areas while keeping transitions sharp at genuine edges. More accurate than Gaussian blur at preserving subject shape." data-tip-low="Slow on large images. Use after other methods if alpha still looks noisy or patchy.">
+              <input type="checkbox" id="enableBilateral">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🌊 Bilateral Filter <span class="sl-unit">(slow)</span></span>
+            </label>
+            <div class="sub" id="sub-bilateral">
+              <div class="sl-row">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="bilateralValue">2</span>
+              </div>
+              <input type="range" id="bilateral" data-tip-title="Filter Strength" data-tip-body="Spatial radius of the bilateral filter." data-tip-low="Higher = wider smoothing area, slower. Lower = subtle local smoothing only." min="1" max="10" value="2">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Edge Sharpening" data-tip-body="Increases contrast at the alpha boundary — boosts near-opaque pixels toward fully opaque and near-transparent pixels toward fully transparent. Gives a crisper, harder edge." data-tip-low="Use when feathering or Gaussian blur left an edge that's too soft. Combine carefully — over-sharpening creates harsh cutout edges.">
+              <input type="checkbox" id="enableEdgeEnhance">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🎯 Edge Sharpening</span>
+            </label>
+            <div class="sub" id="sub-edge-enhance">
+              <div class="sl-row">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="edgeEnhanceValue">20</span>
+              </div>
+              <input type="range" id="edgeEnhance" data-tip-title="Sharpening Strength" data-tip-body="How strongly the alpha contrast is boosted at the edge." data-tip-low="Higher = harder edge cutout. Lower = subtle tightening only." min="0" max="100" value="20">
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <!-- ══ 5. Matting ══ -->
+      <details class="section">
+        <summary>
+          <span class="sec-icon">✨</span>
+          <span class="sec-title">Matting</span>
+          <span class="sec-badge" id="badge-matte"></span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Soft Alpha" data-tip-body="Makes near-background-colored pixels semi-transparent rather than fully removed. Especially effective for hair strands on a light background — strand tips that partially match the BG color get a physics-correct partial alpha." data-tip-low="Level 1 = mild (×9 tolerance zone), Level 2 = medium (×36), Level 3 = aggressive (×100). Only applied within the edge band to avoid making dark subjects transparent.">
+              <input type="checkbox" id="enableSoftAlpha">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🪶 Soft Alpha</span>
+            </label>
+            <div class="sub" id="sub-soft-alpha">
+              <div class="sl-row">
+                <span class="sl-lbl">Level</span>
+                <span class="sl-val" id="softAlphaValue">1</span>
+              </div>
+              <input type="range" id="softAlpha" min="1" max="3" value="1" step="1"
+                data-tip-title="Soft Alpha Level" data-tip-body="How aggressively to make near-BG pixels semi-transparent." data-tip-low="1 = subtle, 3 = very aggressive. Hair on white BG typically needs 1–2.">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Edge Erode</span>
+                <span class="sl-val" id="erodeEdgeValue">1</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="erodeEdge" min="0" max="4" value="1" step="1"
+                data-tip-title="Edge Erode" data-tip-body="Shrinks the background mask boundary by this many pixels before soft alpha is applied, creating more overlap with the hair zone." data-tip-low="Pair with Soft Alpha. Higher = more edge overlap. 1–2 is typical.">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Luminance Matte" data-tip-body="Assigns alpha to edge-zone pixels based on luminance physics: alpha = (bgLum − pixelLum) / (bgLum − fgLum). Pixels as bright as the background become transparent; pixels as dark as the subject stay opaque. Works best on light backgrounds with dark hair or fur." data-tip-low="Reach controls how many pixels from the detected edge the matte is applied. Wider = catches more distant strands but may affect solid edges.">
+              <input type="checkbox" id="enableLumMatte">
+              <span class="sw"></span>
+              <span class="toggle-lbl">💡 Luminance Matte</span>
+            </label>
+            <div class="sub" id="sub-lum-matte">
+              <div class="sl-row">
+                <span class="sl-lbl">Reach</span>
+                <span class="sl-val" id="lumMatteValue">15</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="lumMatte" min="3" max="80" value="15"
+                data-tip-title="Luminance Matte Reach" data-tip-body="Pixel distance from the subject edge where luminance-based alpha is applied." data-tip-low="8–20px for clean BGs, 40–80px for hair-heavy images on white BG.">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Spatial Ramp" data-tip-body="Assigns alpha based purely on distance from the BG boundary: pixels right at the edge get near-zero alpha, pixels further inside get full alpha. No color math — purely spatial. Creates a smooth fade from edge inward." data-tip-low="Best for images with a complex or gradient BG where color-based detection is unreliable. Combine with Luminance Matte for best hair results.">
+              <input type="checkbox" id="enableSpatialRamp">
+              <span class="sw"></span>
+              <span class="toggle-lbl">📐 Spatial Ramp</span>
+            </label>
+            <div class="sub" id="sub-spatial-ramp">
+              <div class="sl-row">
+                <span class="sl-lbl">Width</span>
+                <span class="sl-val" id="spatialRampValue">8</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="spatialRamp" min="2" max="30" value="8"
+                data-tip-title="Spatial Ramp Width" data-tip-body="Pixel width of the alpha fade zone from the BG boundary inward." data-tip-low="Wider = softer, more gradual fade. Narrower = sharper cutoff closer to the BG edge.">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Luminance Unmask" data-tip-body="Runs before transparency is applied. Recovers hair strand tips that the flood fill marked as background because their color was within tolerance of the BG. Uses luminance physics to determine which background-marked pixels are actually semi-transparent strands." data-tip-low="Threshold: minimum luminance-predicted alpha (%) for a BG pixel to be restored. Lower = more aggressive recovery. 1–2% is good for very fine hair on white BG.">
+              <input type="checkbox" id="enableLumUnmask">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🔓 Luminance Unmask</span>
+            </label>
+            <div class="sub" id="sub-lum-unmask">
+              <div class="sl-row">
+                <span class="sl-lbl">Reach</span>
+                <span class="sl-val" id="lumUnmaskReachValue">25</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="lumUnmaskReach" min="5" max="60" value="25"
+                data-tip-title="Unmask Reach" data-tip-body="How deep into the BG mask to search for recoverable strand-tip pixels." data-tip-low="20–40px for most hair. Wider reach catches more tips but may over-recover sparse BG areas.">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Threshold</span>
+                <span class="sl-val" id="lumUnmaskThreshValue">2</span>
+                <span class="sl-unit">%</span>
+              </div>
+              <input type="range" id="lumUnmaskThresh" min="1" max="10" value="2" step="1"
+                data-tip-title="Unmask Threshold" data-tip-body="Minimum predicted alpha (%) for a BG pixel to be restored as semi-transparent." data-tip-low="1% = most aggressive recovery. 5–10% = conservative. Lower catches fainter strand tips.">
+            </div>
+          </div>
+
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Alpha Grow" data-tip-body="After removal, spreads alpha outward from opaque subject pixels. Hair strand roots (fully opaque) share decayed alpha with adjacent tips (which were set to 0). Tips 3px from a solid root get: alpha = rootAlpha × (1−3/radius) × strength." data-tip-low="Unlike Luminance Matte, Alpha Grow is anchored to solid subject pixels — it can only restore tips that are physically adjacent to the solid subject body, not isolated strands.">
+              <input type="checkbox" id="enableAlphaGrow">
+              <span class="sw"></span>
+              <span class="toggle-lbl">🌱 Alpha Grow</span>
+            </label>
+            <div class="sub" id="sub-alpha-grow">
+              <div class="sl-row">
+                <span class="sl-lbl">Radius</span>
+                <span class="sl-val" id="alphaGrowRadiusValue">12</span>
+                <span class="sl-unit">px</span>
+              </div>
+              <input type="range" id="alphaGrowRadius" min="2" max="30" value="12"
+                data-tip-title="Grow Radius" data-tip-body="Maximum pixel distance from an opaque subject pixel where alpha is spread." data-tip-low="8–20px for most hair. Wider spreads further but may restore real BG pixels near the subject.">
+              <div class="sl-row" style="margin-top:3px;">
+                <span class="sl-lbl">Strength</span>
+                <span class="sl-val" id="alphaGrowStrengthValue">75</span>
+                <span class="sl-unit">%</span>
+              </div>
+              <input type="range" id="alphaGrowStrength" min="20" max="100" value="75" step="5"
+                data-tip-title="Grow Strength" data-tip-body="How strongly alpha is spread from opaque pixels to their neighbors." data-tip-low="Higher = brighter, more opaque restored pixels. 70–85% works for most hair.">
+            </div>
+          </div>
+
+        </div>
+      </details>
+
+      <!-- ══ 6. Debug ══ -->
+      <details class="section">
+        <summary>
+          <span class="sec-icon">👁</span>
+          <span class="sec-title">Debug</span>
+          <span class="sec-arrow">›</span>
+        </summary>
+        <div class="section-body">
+          <div class="ctrl">
+            <label class="toggle" data-tip-title="Show Detection Mask" data-tip-body="Overlays the raw flood fill result: green = detected background, red = subject. Useful for diagnosing why areas are or aren't being removed." data-tip-low="No effect on the actual exported image.">
+              <input type="checkbox" id="showMask">
+              <span class="sw"></span>
+              <span class="toggle-lbl">Show Detection Mask</span>
+            </label>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="button-group">
-        <button class="btn-success" id="downloadBtn">⬇️ Download PNG</button>
-        <button class="btn-secondary" id="resetBtn">🔄 Reset</button>
-      </div>
-    </div>
+    </div><!-- /sidebar-scroll -->
+  </aside>
 
-    <div class="controls-panel">
-      <h3 style="font-size: 14px; color: #333; margin-bottom: 8px;">⚙️ Settings</h3>
-
-      <div class="control-group">
-        <label for="imageInput" class="file-input-label">📁 Load Image</label>
-        <input type="file" id="imageInput" accept="image/*">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="borderOnlyMode" checked>
-            <span>Detect from Edges Only</span>
-          </div>
-        </label>
-        <div class="info-box">ℹ️ Only removes background connected to image edges.</div>
-        <button class="btn-secondary" id="seedPickerBtn" style="font-size: 12px; padding: 6px;">📍 Edit Custom Seed Points</button>
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>Background Color <span class="auto-detect-badge" id="autoBadge" style="display: none;">Auto</span></label>
-        <div class="color-picker-group">
-          <input type="color" id="bgColorPicker" value="#ffffff">
-          <input type="text" id="bgColorHex" class="color-hex" value="#FFFFFF">
-          <button class="eyedropper-btn" id="eyedropperBtn" title="Click to pick color from image">🎯</button>
-        </div>
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>Color Tolerance <span class="value-display" id="toleranceValue">40</span></label>
-        <input type="range" id="tolerance" min="0" max="100" value="40">
-        <div class="info-box">ℹ️ Perceptual color match (higher = more colors matched).</div>
-      </div>
-      <div class="separator"></div>
-
-      <h4 class="section-title">✨ Edge Enhancement Techniques</h4>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableFeather" checked>
-            <span>🔄 Cubic Feathering (Soft Edges)</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Feather Radius <span class="value-display" id="featherValue">3</span></label>
-        <input type="range" id="feather" min="0" max="25" value="3">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableMorphology" checked>
-            <span>🔷 Mask Dilation (Remove fringes)</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Kernel Size <span class="value-display" id="morphValue">3</span></label>
-        <input type="range" id="morphology" min="1" max="7" value="3" step="1">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableMultisample" checked>
-            <span>📊 Alpha Channel Smoothing</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Smoothing Passes <span class="value-display" id="multisampleValue">2</span></label>
-        <input type="range" id="multisample" min="1" max="5" value="2">
-        <div class="info-box">ℹ️ Box blur on the transparency mask for anti-aliasing.</div>
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableDespill" checked>
-            <span>💧 Despill (Hue Shift)</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Despill Amount <span class="value-display" id="despillValue">40</span></label>
-        <input type="range" id="despill" min="0" max="100" value="40">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableBilateral">
-            <span>🌊 Bilateral Filter (Slow)</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Filter Strength <span class="value-display" id="bilateralValue">2</span></label>
-        <input type="range" id="bilateral" min="1" max="10" value="2">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="enableEdgeEnhance">
-            <span>🎯 Edge Sharpening</span>
-          </div>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>Enhancement Strength <span class="value-display" id="edgeEnhanceValue">20</span></label>
-        <input type="range" id="edgeEnhance" min="0" max="100" value="20">
-      </div>
-      <div class="separator"></div>
-
-      <div class="control-group">
-        <label>
-          <div class="checkbox-group">
-            <input type="checkbox" id="showMask">
-            <span>Show Detection Mask</span>
-          </div>
-        </label>
-      </div>
-    </div>
-  </div>
 </div>
+
+<div id="tooltip"><div class="tt-title" id="tt-title"></div><div class="tt-body" id="tt-body"></div><div class="tt-low" id="tt-low"></div></div>
 
 <script>
   // ========== APPLICATION STATE ==========
@@ -287,8 +834,13 @@
     originalImageForDisplay: null,
     currentImage: null,
     isEyedropperActive: false,
+    isAddSampleActive: false,
     isSeedPickerActive: false,
-    seedPoints: [], // Holds {x, y} markers
+    isZoneDrawActive: false,
+    zoneDrawStart: null,
+    seedPoints: [],
+    bgSamples: [],       // [{r,g,b}] extra background color samples
+    toleranceZones: [],  // [{x1,y1,x2,y2,tolerance}]
     originalCanvas: document.createElement('canvas'),
     previewCanvas: document.getElementById('previewCanvas'),
     previewCtx: null,
@@ -296,7 +848,10 @@
     isProcessing: false,
     detectedBgColor: null,
     currentPreviewBg: 'transparent',
-    pixelMagnification: 1
+    pixelMagnification: 1,
+    // Cached snapshot of the last fully-processed frame.
+    // Used by zone rubber-band drawing so mousemove doesn't re-run the pipeline.
+    lastProcessedSnapshot: null
   };
 
   const ui = {
@@ -338,15 +893,214 @@
     morphValue: document.getElementById('morphValue'),
     enableMultisample: document.getElementById('enableMultisample'),
     multisample: document.getElementById('multisample'),
-    multisampleValue: document.getElementById('multisampleValue')
+    multisampleValue: document.getElementById('multisampleValue'),
+    enableColorPull: document.getElementById('enableColorPull'),
+    colorPull: document.getElementById('colorPull'),
+    colorPullValue: document.getElementById('colorPullValue'),
+    enableSmartTrim: document.getElementById('enableSmartTrim'),
+    smartTrim: document.getElementById('smartTrim'),
+    smartTrimValue: document.getElementById('smartTrimValue'),
+    smartTrimSens: document.getElementById('smartTrimSens'),
+    smartTrimSensValue: document.getElementById('smartTrimSensValue'),
+    gaussianReach: document.getElementById('gaussianReach'),
+    gaussianReachValue: document.getElementById('gaussianReachValue'),
+    enableAlphaUnmix: document.getElementById('enableAlphaUnmix'),
+    alphaUnmixReach: document.getElementById('alphaUnmixReach'),
+    alphaUnmixReachValue: document.getElementById('alphaUnmixReachValue'),
+    alphaUnmixStrength: document.getElementById('alphaUnmixStrength'),
+    alphaUnmixStrengthValue: document.getElementById('alphaUnmixStrengthValue'),
+    addSampleBtn: document.getElementById('addSampleBtn'),
+    sampleSwatches: document.getElementById('sampleSwatches'),
+    enableAdaptive: document.getElementById('enableAdaptive'),
+    adaptiveStrength: document.getElementById('adaptiveStrength'),
+    adaptiveStrengthValue: document.getElementById('adaptiveStrengthValue'),
+    enableColorSpread: document.getElementById('enableColorSpread'),
+    enableEdgeBarrier: document.getElementById('enableEdgeBarrier'),
+    edgeBarrier: document.getElementById('edgeBarrier'),
+    edgeBarrierValue: document.getElementById('edgeBarrierValue'),
+    enableDirTol: document.getElementById('enableDirTol'),
+    dirBoostColor: document.getElementById('dirBoostColor'),
+    dirBoostStrength: document.getElementById('dirBoostStrength'),
+    dirBoostStrengthValue: document.getElementById('dirBoostStrengthValue'),
+    dirWeakenColor: document.getElementById('dirWeakenColor'),
+    dirWeakenStrength: document.getElementById('dirWeakenStrength'),
+    dirWeakenStrengthValue: document.getElementById('dirWeakenStrengthValue'),
+    enableZones: document.getElementById('enableZones'),
+    zoneDrawBtn: document.getElementById('zoneDrawBtn'),
+    zoneList: document.getElementById('zoneList'),
+    // Chroma Key
+    enableChromaKey: document.getElementById('enableChromaKey'),
+    chromaHueCenter: document.getElementById('chromaHueCenter'),
+    chromaHueCenterValue: document.getElementById('chromaHueCenterValue'),
+    chromaHueRange: document.getElementById('chromaHueRange'),
+    chromaHueRangeValue: document.getElementById('chromaHueRangeValue'),
+    chromaSatMin: document.getElementById('chromaSatMin'),
+    chromaSatMinValue: document.getElementById('chromaSatMinValue'),
+    // Smart Remove
+    smartRemoveBtn: document.getElementById('smartRemoveBtn'),
+    // Matting
+    enableSoftAlpha: document.getElementById('enableSoftAlpha'),
+    softAlpha: document.getElementById('softAlpha'),
+    softAlphaValue: document.getElementById('softAlphaValue'),
+    erodeEdge: document.getElementById('erodeEdge'),
+    erodeEdgeValue: document.getElementById('erodeEdgeValue'),
+    enableLumMatte: document.getElementById('enableLumMatte'),
+    lumMatte: document.getElementById('lumMatte'),
+    lumMatteValue: document.getElementById('lumMatteValue'),
+    enableSpatialRamp: document.getElementById('enableSpatialRamp'),
+    spatialRamp: document.getElementById('spatialRamp'),
+    spatialRampValue: document.getElementById('spatialRampValue'),
+    enableLumUnmask: document.getElementById('enableLumUnmask'),
+    lumUnmaskReach: document.getElementById('lumUnmaskReach'),
+    lumUnmaskReachValue: document.getElementById('lumUnmaskReachValue'),
+    lumUnmaskThresh: document.getElementById('lumUnmaskThresh'),
+    lumUnmaskThreshValue: document.getElementById('lumUnmaskThreshValue'),
+    enableAlphaGrow: document.getElementById('enableAlphaGrow'),
+    alphaGrowRadius: document.getElementById('alphaGrowRadius'),
+    alphaGrowRadiusValue: document.getElementById('alphaGrowRadiusValue'),
+    alphaGrowStrength: document.getElementById('alphaGrowStrength'),
+    alphaGrowStrengthValue: document.getElementById('alphaGrowStrengthValue')
   };
+
+
+  // ══ TOOLTIP ENGINE ══════════════════════════════════════════════════════════
+  (function() {
+    const tt    = document.getElementById('tooltip');
+    const ttT   = document.getElementById('tt-title');
+    const ttB   = document.getElementById('tt-body');
+    const ttL   = document.getElementById('tt-low');
+    let timer   = null;
+    let current = null;
+
+    function findTipTarget(el) {
+      // Walk up the DOM to find the nearest element with data-tip-body
+      let node = el;
+      while (node && node !== document.body) {
+        if (node.dataset && (node.dataset.tipBody || node.dataset.tipTitle)) return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+
+    function show(el, e) {
+      const node = findTipTarget(el);
+      if (!node) return;
+      ttT.textContent = node.dataset.tipTitle || '';
+      ttB.textContent = node.dataset.tipBody  || '';
+      ttL.textContent = node.dataset.tipLow   || '';
+      ttL.style.display = node.dataset.tipLow ? '' : 'none';
+      tt.classList.add('visible');
+      position(e);
+    }
+
+    function position(e) {
+      const W = window.innerWidth, H = window.innerHeight;
+      const TW = tt.offsetWidth || 224, TH = tt.offsetHeight || 80;
+      const GAP = 12;
+      let x = e.clientX + GAP;
+      let y = e.clientY + GAP;
+      if (x + TW > W - 8) x = e.clientX - TW - GAP;
+      if (y + TH > H - 8) y = e.clientY - TH - GAP;
+      tt.style.left = Math.max(8, x) + 'px';
+      tt.style.top  = Math.max(8, y) + 'px';
+    }
+
+    document.addEventListener('mouseover', e => {
+      const node = findTipTarget(e.target);
+      if (!node || node === current) return;
+      clearTimeout(timer);
+      current = node;
+      timer = setTimeout(() => show(e.target, e), 420);
+    });
+    document.addEventListener('mousemove', e => {
+      if (tt.classList.contains('visible')) position(e);
+    });
+    document.addEventListener('mouseout', e => {
+      clearTimeout(timer);
+      current = null;
+      tt.classList.remove('visible');
+    });
+    // Hide on scroll / interaction
+    document.addEventListener('mousedown', () => { clearTimeout(timer); tt.classList.remove('visible'); });
+  })();
+
+  // ══ DIRECTIONAL TOLERANCE GRADIENT PREVIEWS ══════════════════════════════════
+  function updateDirTolGradients() {
+    const bgHex = document.getElementById('bgColorHex').value || '#ffffff';
+    const boostHex = document.getElementById('dirBoostColor').value;
+    const weakenHex = document.getElementById('dirWeakenColor').value;
+    const boost = document.getElementById('dirBoostGrad');
+    const weaken = document.getElementById('dirWeakenGrad');
+    if (boost)  boost.style.background  = `linear-gradient(to right, ${bgHex}, ${boostHex})`;
+    if (weaken) weaken.style.background = `linear-gradient(to right, ${bgHex}, ${weakenHex})`;
+  }
+
+  // Hook gradient updates into all relevant inputs
+  function initDirTolGradients() {
+    const bgHexEl   = document.getElementById('bgColorHex');
+    const bgPickEl  = document.getElementById('bgColorPicker');
+    const boostEl   = document.getElementById('dirBoostColor');
+    const weakenEl  = document.getElementById('dirWeakenColor');
+    if (bgHexEl)  bgHexEl.addEventListener('input', updateDirTolGradients);
+    if (bgPickEl) bgPickEl.addEventListener('input', updateDirTolGradients);
+    if (boostEl)  boostEl.addEventListener('input', updateDirTolGradients);
+    if (weakenEl) weakenEl.addEventListener('input', updateDirTolGradients);
+    updateDirTolGradients(); // set initial
+  }
+
+    // ── Sub-control panel visibility ─────────────────────────────────────────
+  // Maps each parent checkbox ID → the sub-panel element ID it controls.
+  const SUB_MAP = {
+    enableAdaptive:    'sub-adaptive',
+    enableEdgeBarrier: 'sub-edge-barrier',
+    enableDirTol:      'sub-dir-tol',
+    enableChromaKey:   'sub-chroma-key',
+    enableZones:       'sub-zones',
+    enableSmartTrim:   'sub-smart-trim',
+    enableAlphaUnmix:  'sub-alpha-unmix',
+    enableMultisample: 'sub-gaussian',
+    enableFeather:     'sub-feather',
+    enableColorPull:   'sub-color-pull',
+    enableDespill:     'sub-despill',
+    enableMorphology:  'sub-morphology',
+    enableBilateral:   'sub-bilateral',
+    enableEdgeEnhance: 'sub-edge-enhance',
+    enableSoftAlpha:   'sub-soft-alpha',
+    enableLumMatte:    'sub-lum-matte',
+    enableSpatialRamp: 'sub-spatial-ramp',
+    enableLumUnmask:   'sub-lum-unmask',
+    enableAlphaGrow:   'sub-alpha-grow',
+  };
+
+  // Show/hide sub-panels and update section active badges
+  function syncSubControls() {
+    for (const [cbId, subId] of Object.entries(SUB_MAP)) {
+      const cb  = document.getElementById(cbId);
+      const sub = document.getElementById(subId);
+      if (cb && sub) sub.classList.toggle('open', cb.checked);
+    }
+    // Update section active-count badges
+    const sections = {
+      'badge-tolerance': ['enableAdaptive','enableColorSpread','enableEdgeBarrier','enableDirTol','enableZones','enableChromaKey'],
+      'badge-edge':      ['enableSmartTrim','enableAlphaUnmix','enableMultisample','enableFeather','enableColorPull'],
+      'badge-cleanup':   ['enableDespill','enableMorphology','enableBilateral','enableEdgeEnhance'],
+      'badge-matte':     ['enableSoftAlpha','enableLumMatte','enableSpatialRamp','enableLumUnmask','enableAlphaGrow'],
+    };
+    for (const [badgeId, ids] of Object.entries(sections)) {
+      const el = document.getElementById(badgeId);
+      if (!el) continue;
+      const count = ids.filter(id => { const cb = document.getElementById(id); return cb && cb.checked; }).length;
+      el.textContent = count;
+      el.classList.toggle('has-active', count > 0);
+    }
+  }
 
   function init() {
     state.previewCtx = state.previewCanvas.getContext('2d', { willReadFrequently: true });
-    
+
     const bindSync = (el, valEl, action) => {
       el.addEventListener('input', (e) => {
-        if(valEl) valEl.textContent = e.target.value;
+        if (valEl) valEl.textContent = e.target.value;
         action();
       });
     };
@@ -361,6 +1115,21 @@
     bindSync(ui.edgeEnhance, ui.edgeEnhanceValue, updatePreview);
     bindSync(ui.morphology, ui.morphValue, updatePreview);
     bindSync(ui.multisample, ui.multisampleValue, updatePreview);
+    bindSync(ui.colorPull, ui.colorPullValue, updatePreview);
+    bindSync(ui.smartTrim, ui.smartTrimValue, updatePreview);
+    bindSync(ui.smartTrimSens, ui.smartTrimSensValue, updatePreview);
+    bindSync(ui.gaussianReach, ui.gaussianReachValue, updatePreview);
+    bindSync(ui.alphaUnmixReach, ui.alphaUnmixReachValue, updatePreview);
+    bindSync(ui.alphaUnmixStrength, ui.alphaUnmixStrengthValue, updatePreview);
+    // Matting sliders
+    bindSync(ui.softAlpha, ui.softAlphaValue, updatePreview);
+    bindSync(ui.erodeEdge, ui.erodeEdgeValue, updatePreview);
+    bindSync(ui.lumMatte, ui.lumMatteValue, updatePreview);
+    bindSync(ui.spatialRamp, ui.spatialRampValue, updatePreview);
+    bindSync(ui.lumUnmaskReach, ui.lumUnmaskReachValue, updatePreview);
+    bindSync(ui.lumUnmaskThresh, ui.lumUnmaskThreshValue, updatePreview);
+    bindSync(ui.alphaGrowRadius, ui.alphaGrowRadiusValue, updatePreview);
+    bindSync(ui.alphaGrowStrength, ui.alphaGrowStrengthValue, updatePreview);
 
     ui.borderOnlyMode.addEventListener('change', updatePreview);
     ui.enableFeather.addEventListener('change', updatePreview);
@@ -369,11 +1138,56 @@
     ui.enableEdgeEnhance.addEventListener('change', updatePreview);
     ui.enableMorphology.addEventListener('change', updatePreview);
     ui.enableMultisample.addEventListener('change', updatePreview);
+    ui.enableColorPull.addEventListener('change', updatePreview);
+    ui.enableSmartTrim.addEventListener('change', updatePreview);
+    ui.enableAlphaUnmix.addEventListener('change', updatePreview);
+    // Matting toggles
+    ui.enableSoftAlpha.addEventListener('change', () => { syncSubControls(); updatePreview(); });
+    ui.enableLumMatte.addEventListener('change', () => { syncSubControls(); updatePreview(); });
+    ui.enableSpatialRamp.addEventListener('change', () => { syncSubControls(); updatePreview(); });
+    ui.enableLumUnmask.addEventListener('change', () => { syncSubControls(); updatePreview(); });
+    ui.enableAlphaGrow.addEventListener('change', () => { syncSubControls(); updatePreview(); });
+    ui.enableAdaptive.addEventListener('change', () => {
+      if (ui.enableAdaptive.checked) ui.enableColorSpread.checked = false;
+      updatePreview();
+    });
+    bindSync(ui.adaptiveStrength, ui.adaptiveStrengthValue, updatePreview);
+    ui.enableColorSpread.addEventListener('change', () => {
+      if (ui.enableColorSpread.checked) {
+        ui.enableAdaptive.checked = false;
+        // Color Spreading only works in flood-fill mode — ensure Edges Only is on
+        if (!ui.borderOnlyMode.checked) { ui.borderOnlyMode.checked = true; syncSubControls(); }
+      }
+      updatePreview();
+    });
+    ui.enableEdgeBarrier.addEventListener('change', () => {
+      if (ui.enableEdgeBarrier.checked && !ui.borderOnlyMode.checked) {
+        // Edge Barrier only blocks flood-fill expansion — enable Edges Only mode
+        ui.borderOnlyMode.checked = true; syncSubControls();
+      }
+      updatePreview();
+    });
+    bindSync(ui.edgeBarrier, ui.edgeBarrierValue, updatePreview);
+    ui.enableDirTol.addEventListener('change', updatePreview);
+    ui.dirBoostColor.addEventListener('input', updatePreview);
+    ui.dirWeakenColor.addEventListener('input', updatePreview);
+    bindSync(ui.dirBoostStrength, ui.dirBoostStrengthValue, updatePreview);
+    bindSync(ui.dirWeakenStrength, ui.dirWeakenStrengthValue, updatePreview);
+    ui.enableZones.addEventListener('change', () => {
+      // Sub-panel visibility is handled by syncSubControls via the global
+      // checkbox change listener — no need to touch zoneDrawBtn.style directly.
+      updatePreview();
+    });
+    ui.addSampleBtn.addEventListener('click', toggleAddSample);
+    ui.zoneDrawBtn.addEventListener('click', toggleZoneDraw);
+    state.previewCanvas.addEventListener('mousedown', handleCanvasMouseDown);
+    state.previewCanvas.addEventListener('mousemove', handleCanvasMouseMove);
+    state.previewCanvas.addEventListener('mouseup', handleCanvasMouseUp);
     ui.showMask.addEventListener('change', updatePreview);
 
     ui.eyedropperBtn.addEventListener('click', toggleEyedropper);
     ui.seedPickerBtn.addEventListener('click', toggleSeedPicker);
-    
+
     ui.downloadBtn.addEventListener('click', downloadImage);
     ui.resetBtn.addEventListener('click', resetImage);
     ui.autoScaleMode.addEventListener('change', updatePreview);
@@ -382,6 +1196,35 @@
 
     ui.tabButtons.forEach(btn => btn.addEventListener('click', handleTabSwitch));
     ui.bgButtons.forEach(btn => btn.addEventListener('click', handleBgButtonClick));
+
+    // Chroma Key listeners
+    ui.enableChromaKey.addEventListener('change', () => {
+      drawChromaKeyBar();
+      syncSubControls();
+      updatePreview();
+    });
+    // Use custom handlers for sliders that need extra formatting (°)
+    ui.chromaHueCenter.addEventListener('input', (e) => {
+      ui.chromaHueCenterValue.textContent = e.target.value;
+      drawChromaKeyBar();
+      updatePreview();
+    });
+    ui.chromaHueRange.addEventListener('input', (e) => {
+      ui.chromaHueRangeValue.textContent = e.target.value;
+      drawChromaKeyBar();
+      updatePreview();
+    });
+    bindSync(ui.chromaSatMin, ui.chromaSatMinValue, updatePreview);
+
+    // Smart Remove
+    ui.smartRemoveBtn.addEventListener('click', applySmartRemove);
+
+    // Global checkbox listener keeps sub-panels and badges in sync
+    document.addEventListener('change', e => { if (e.target.type === 'checkbox') syncSubControls(); });
+    syncSubControls(); // Set initial state
+    initDirTolGradients(); // Set initial gradient previews
+    // Draw chroma key bar once canvas has layout dimensions
+    requestAnimationFrame(drawChromaKeyBar);
   }
 
   function handleImageUpload(e) {
@@ -415,7 +1258,6 @@
   function toggleEyedropper() {
     state.isEyedropperActive = !state.isEyedropperActive;
     ui.eyedropperBtn.classList.toggle('active', state.isEyedropperActive);
-    
     if (state.isEyedropperActive) {
       state.isSeedPickerActive = false;
       ui.seedPickerBtn.classList.remove('btn-primary');
@@ -430,7 +1272,6 @@
     state.isSeedPickerActive = !state.isSeedPickerActive;
     ui.seedPickerBtn.classList.toggle('btn-primary', state.isSeedPickerActive);
     ui.seedPickerBtn.classList.toggle('btn-secondary', !state.isSeedPickerActive);
-    
     if (state.isSeedPickerActive) {
       state.isEyedropperActive = false;
       ui.eyedropperBtn.classList.remove('active');
@@ -442,49 +1283,195 @@
 
   function handleCanvasClick(e) {
     if (!state.currentImage) return;
-    if (!state.isEyedropperActive && !state.isSeedPickerActive) return;
+    if (!state.isEyedropperActive && !state.isSeedPickerActive && !state.isAddSampleActive) return;
 
-    // Use CSS Rect to properly compute image pixel mapping despite any styling
     const rect = state.previewCanvas.getBoundingClientRect();
     const scaleX = state.currentImage.width / rect.width;
     const scaleY = state.currentImage.height / rect.height;
-    
     const x = Math.floor((e.clientX - rect.left) * scaleX);
     const y = Math.floor((e.clientY - rect.top) * scaleY);
-    
     const canvasX = Math.max(0, Math.min(x, state.currentImage.width - 1));
     const canvasY = Math.max(0, Math.min(y, state.currentImage.height - 1));
 
     if (state.isEyedropperActive) {
-      // Pick color from the pure, unedited original image
       const originalCtx = state.originalImageForDisplay.getContext('2d');
       const imageData = originalCtx.getImageData(canvasX, canvasY, 1, 1);
       const [r, g, b] = imageData.data;
       const color = rgbToHex(r, g, b);
-      
       ui.bgColorPicker.value = color;
       ui.bgColorHex.value = color.toUpperCase();
       ui.autoBadge.style.display = 'none';
-      
       state.isEyedropperActive = false;
       ui.eyedropperBtn.classList.remove('active');
       state.previewCanvas.style.cursor = 'default';
       updatePreview();
-    } 
-    else if (state.isSeedPickerActive) {
-      // Manage seed points
+    } else if (state.isAddSampleActive) {
+      const originalCtx = state.originalImageForDisplay.getContext('2d');
+      const imageData = originalCtx.getImageData(canvasX, canvasY, 1, 1);
+      const [r, g, b] = imageData.data;
+      state.bgSamples.push({ r, g, b });
+      state.isAddSampleActive = false;
+      ui.addSampleBtn.classList.remove('active');
+      state.previewCanvas.style.cursor = 'default';
+      renderSampleSwatches();
+      updatePreview();
+    } else if (state.isSeedPickerActive) {
       const hitRadius = 10;
-      const existingIndex = state.seedPoints.findIndex(pt => 
-         Math.hypot(pt.x - canvasX, pt.y - canvasY) < hitRadius
+      const existingIndex = state.seedPoints.findIndex(pt =>
+        Math.hypot(pt.x - canvasX, pt.y - canvasY) < hitRadius
       );
-      
       if (existingIndex !== -1) {
-         state.seedPoints.splice(existingIndex, 1); // Remove if clicked nearby
+        state.seedPoints.splice(existingIndex, 1);
       } else {
-         state.seedPoints.push({ x: canvasX, y: canvasY }); // Add new seed
+        state.seedPoints.push({ x: canvasX, y: canvasY });
       }
       updatePreview();
     }
+  }
+
+  // ── Sample picker ──────────────────────────────────────────────────────────
+  function toggleAddSample() {
+    state.isAddSampleActive = !state.isAddSampleActive;
+    ui.addSampleBtn.classList.toggle('active', state.isAddSampleActive);
+    if (state.isAddSampleActive) {
+      state.isEyedropperActive = false; state.isSeedPickerActive = false; state.isZoneDrawActive = false;
+      ui.eyedropperBtn.classList.remove('active');
+      state.previewCanvas.style.cursor = 'crosshair';
+    } else { state.previewCanvas.style.cursor = 'default'; }
+  }
+
+  function renderSampleSwatches() {
+    ui.sampleSwatches.innerHTML = '';
+    state.bgSamples.forEach((s, i) => {
+      const sw = document.createElement('div');
+      sw.className = 'sample-swatch';
+      sw.style.background = `rgb(${s.r},${s.g},${s.b})`;
+      sw.title = `Sample ${i+1}: rgb(${s.r},${s.g},${s.b}) — click to remove`;
+      sw.addEventListener('click', () => { state.bgSamples.splice(i, 1); renderSampleSwatches(); updatePreview(); });
+      ui.sampleSwatches.appendChild(sw);
+    });
+  }
+
+  // ── Zone drawing ────────────────────────────────────────────────────────────
+  function toggleZoneDraw() {
+    state.isZoneDrawActive = !state.isZoneDrawActive;
+    ui.zoneDrawBtn.classList.toggle('btn-primary', state.isZoneDrawActive);
+    ui.zoneDrawBtn.classList.toggle('btn-secondary', !state.isZoneDrawActive);
+    ui.zoneDrawBtn.textContent = state.isZoneDrawActive ? '✏️ Drawing… (click-drag)' : '✏️ Draw Zone';
+    if (state.isZoneDrawActive) {
+      state.isEyedropperActive = false; state.isAddSampleActive = false; state.isSeedPickerActive = false;
+      ui.eyedropperBtn.classList.remove('active');
+      ui.addSampleBtn.classList.remove('active');
+      state.previewCanvas.style.cursor = 'crosshair';
+    } else { state.previewCanvas.style.cursor = 'default'; }
+  }
+
+  function canvasToImageCoords(e) {
+    const rect = state.previewCanvas.getBoundingClientRect();
+    const img = state.currentImage;
+    const x = Math.max(0, Math.min(img.width - 1,  Math.floor((e.clientX - rect.left)  * img.width  / rect.width)));
+    const y = Math.max(0, Math.min(img.height - 1, Math.floor((e.clientY - rect.top)   * img.height / rect.height)));
+    return { x, y };
+  }
+
+  function handleCanvasMouseDown(e) {
+    if (!state.currentImage || !state.isZoneDrawActive) return;
+    const p = canvasToImageCoords(e);
+    state.zoneDrawStart = p;
+  }
+
+  function handleCanvasMouseMove(e) {
+    if (!state.isZoneDrawActive || !state.zoneDrawStart) return;
+    // Restore the last processed snapshot so we don't re-run the full pipeline
+    // on every mousemove — just stamp the cached frame and draw the rubber band on top.
+    const ctx = state.previewCtx;
+    if (state.lastProcessedSnapshot) {
+      ctx.putImageData(state.lastProcessedSnapshot, 0, 0);
+    }
+    const start = state.zoneDrawStart;
+    const cur = canvasToImageCoords(e);
+    const img = state.currentImage;
+    const sx = start.x / img.width  * state.previewCanvas.width;
+    const sy = start.y / img.height * state.previewCanvas.height;
+    const cx = cur.x   / img.width  * state.previewCanvas.width;
+    const cy = cur.y   / img.height * state.previewCanvas.height;
+    ctx.save();
+    ctx.strokeStyle = '#4f8ef7';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 3]);
+    ctx.strokeRect(Math.min(sx,cx), Math.min(sy,cy), Math.abs(cx-sx), Math.abs(cy-sy));
+    ctx.fillStyle = 'rgba(79,142,247,0.07)';
+    ctx.fillRect(Math.min(sx,cx), Math.min(sy,cy), Math.abs(cx-sx), Math.abs(cy-sy));
+    ctx.restore();
+  }
+
+  function handleCanvasMouseUp(e) {
+    if (!state.currentImage || !state.isZoneDrawActive || !state.zoneDrawStart) return;
+    const start = state.zoneDrawStart;
+    const end = canvasToImageCoords(e);
+    state.zoneDrawStart = null;
+    if (Math.abs(end.x - start.x) < 3 || Math.abs(end.y - start.y) < 3) return; // too small
+    state.toleranceZones.push({
+      x1: Math.min(start.x, end.x), y1: Math.min(start.y, end.y),
+      x2: Math.max(start.x, end.x), y2: Math.max(start.y, end.y),
+      tolerance: parseInt(ui.tolerance.value)
+    });
+    toggleZoneDraw(); // exit draw mode after each zone
+    renderZoneList();
+    updatePreview();
+  }
+
+  function renderZoneList() {
+    ui.zoneList.innerHTML = '';
+    const colors = ['#667eea','#51cf66','#ff922b','#ff6b6b','#ffd43b','#b197fc'];
+    state.toleranceZones.forEach((z, i) => {
+      const row = document.createElement('div');
+      row.className = 'zone-item';
+      const dot = document.createElement('div');
+      dot.className = 'zone-color';
+      dot.style.background = colors[i % colors.length];
+      const label = document.createElement('span');
+      label.textContent = `Z${i+1}`;
+      label.style.fontWeight = '600';
+      label.style.color = colors[i % colors.length];
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.min = 0; slider.max = 100; slider.value = z.tolerance; slider.step = 1;
+      const tolLabel = document.createElement('span');
+      tolLabel.className = 'zone-tol-label';
+      tolLabel.textContent = z.tolerance;
+      slider.addEventListener('input', () => { z.tolerance = parseInt(slider.value); tolLabel.textContent = slider.value; updatePreview(); });
+      const rm = document.createElement('button');
+      rm.className = 'zone-remove'; rm.textContent = '✕';
+      rm.addEventListener('click', () => { state.toleranceZones.splice(i, 1); renderZoneList(); updatePreview(); });
+      row.appendChild(dot); row.appendChild(label); row.appendChild(slider); row.appendChild(tolLabel); row.appendChild(rm);
+      ui.zoneList.appendChild(row);
+    });
+  }
+
+  // Draw zone overlays on the preview canvas
+  function drawZoneOverlays() {
+    if (!state.currentImage || !ui.enableZones.checked) return;
+    const colors = ['#667eea','#51cf66','#ff922b','#ff6b6b','#ffd43b','#b197fc'];
+    const ctx = state.previewCtx;
+    const img = state.currentImage;
+    const scaleX = state.previewCanvas.width  / img.width;
+    const scaleY = state.previewCanvas.height / img.height;
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1.5;
+    state.toleranceZones.forEach((z, i) => {
+      ctx.strokeStyle = colors[i % colors.length];
+      ctx.fillStyle = colors[i % colors.length] + '14';
+      const rx = z.x1*scaleX, ry = z.y1*scaleY, rw = (z.x2-z.x1)*scaleX, rh = (z.y2-z.y1)*scaleY;
+      ctx.fillRect(rx,ry,rw,rh);
+      ctx.strokeRect(rx,ry,rw,rh);
+      ctx.setLineDash([]);
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillText(`Z${i+1} tol:${z.tolerance}`, rx+3, ry+11);
+      ctx.setLineDash([4,3]);
+    });
+    ctx.restore();
   }
 
   function handleTabSwitch(e) {
@@ -532,7 +1519,11 @@
   function resetImage() {
     if (!state.originalImage) return alert('Please load an image first');
     state.currentImage = state.originalImage;
-    state.seedPoints = []; // Reset seeds on fresh start
+    state.seedPoints = [];
+    state.bgSamples = [];
+    state.toleranceZones = [];
+    renderSampleSwatches();
+    renderZoneList();
     updatePreview();
   }
 
@@ -549,22 +1540,77 @@
     state.originalImageForDisplay.height = img.height;
     state.originalImageForDisplay.getContext('2d').drawImage(img, 0, 0);
     state.currentImage = canvas;
-    state.seedPoints = []; // Reset seed points
+    state.seedPoints = [];
 
+    resetAllControls();
     detectBackgroundColor(canvas);
     ui.imageDim.textContent = `${canvas.width} × ${canvas.height}px`;
     updatePreview();
   }
 
+  // Reset every algorithm to its zero/off state when a new image is loaded.
+  // The user starts with a clean slate and uses Smart Remove or manual controls.
+  function resetAllControls() {
+    // Tolerance → 1 (minimum, essentially transparent/no removal until user acts)
+    ui.tolerance.value = 1;
+    ui.toleranceValue.textContent = 1;
+
+    // Detection
+    ui.enableAdaptive.checked    = false;
+    ui.enableColorSpread.checked = false;
+    ui.enableEdgeBarrier.checked = false;
+    ui.borderOnlyMode.checked    = true;  // keep edges-only as the safe default
+
+    // Edge refinement — all off
+    ui.enableSmartTrim.checked   = false;
+    ui.enableAlphaUnmix.checked  = false;
+    ui.enableMultisample.checked = false;
+    ui.enableFeather.checked     = false;
+    ui.enableColorPull.checked   = false;
+
+    // Cleanup — all off
+    ui.enableDespill.checked     = false;
+    ui.enableMorphology.checked  = false;
+    ui.enableBilateral.checked   = false;
+    ui.enableEdgeEnhance.checked = false;
+
+    // Matting — all off
+    ui.enableSoftAlpha.checked   = false;
+    ui.enableLumMatte.checked    = false;
+    ui.enableSpatialRamp.checked = false;
+    ui.enableLumUnmask.checked   = false;
+    ui.enableAlphaGrow.checked   = false;
+
+    // Chroma key off
+    ui.enableChromaKey.checked   = false;
+
+    syncSubControls();
+  }
+
   function detectBackgroundColor(canvas) {
     const ctx = canvas.getContext('2d');
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const w = canvas.width, h = canvas.height;
+    const imgData = ctx.getImageData(0, 0, w, h).data;
     const edgePixels = [];
-    const step = 4 * Math.max(1, Math.floor(Math.min(canvas.width, canvas.height) / 32));
-    
-    // Sample edges safely
-    for (let i = 0; i < canvas.width * 4; i += step) edgePixels.push(`${imgData[i]},${imgData[i+1]},${imgData[i+2]}`);
-    
+
+    // Sample all 4 edges more thoroughly
+    const step = Math.max(1, Math.floor(Math.min(w, h) / 64));
+    for (let x = 0; x < w; x += step) {
+      // top row
+      edgePixels.push(`${imgData[(x) * 4]},${imgData[(x) * 4 + 1]},${imgData[(x) * 4 + 2]}`);
+      // bottom row
+      const bi = ((h - 1) * w + x) * 4;
+      edgePixels.push(`${imgData[bi]},${imgData[bi + 1]},${imgData[bi + 2]}`);
+    }
+    for (let y = 0; y < h; y += step) {
+      // left col
+      const li = (y * w) * 4;
+      edgePixels.push(`${imgData[li]},${imgData[li + 1]},${imgData[li + 2]}`);
+      // right col
+      const ri = (y * w + w - 1) * 4;
+      edgePixels.push(`${imgData[ri]},${imgData[ri + 1]},${imgData[ri + 2]}`);
+    }
+
     const colorMap = new Map();
     let maxCount = 0;
     let mostCommonColor = { r: 255, g: 255, b: 255 };
@@ -584,6 +1630,7 @@
     ui.bgColorHex.value = hex.toUpperCase();
     ui.bgColor.textContent = hex.toUpperCase();
     ui.autoBadge.style.display = 'inline-block';
+    updateDirTolGradients();
   }
 
   function getBackgroundColor() { return hexToRgb(ui.bgColorHex.value); }
@@ -597,15 +1644,46 @@
       despill: ui.enableDespill.checked ? parseInt(ui.despill.value) : 0,
       edgeEnhance: ui.enableEdgeEnhance.checked ? parseInt(ui.edgeEnhance.value) : 0,
       morphology: ui.enableMorphology.checked ? parseInt(ui.morphology.value) : 0,
-      multisample: ui.enableMultisample.checked ? parseInt(ui.multisample.value) : 0,
-      showMask: ui.showMask.checked
+      multisample: ui.enableMultisample.checked ? parseFloat(ui.multisample.value) : 0,
+      gaussianReach: ui.enableMultisample.checked ? parseInt(ui.gaussianReach.value) : 0,
+      colorPull: ui.enableColorPull.checked ? parseInt(ui.colorPull.value) : 0,
+      smartTrim: ui.enableSmartTrim.checked ? parseInt(ui.smartTrim.value) : 0,
+      smartTrimSens: ui.enableSmartTrim.checked ? parseInt(ui.smartTrimSens.value) / 100 : 1.0,
+      alphaUnmix: ui.enableAlphaUnmix.checked ? parseInt(ui.alphaUnmixReach.value) : 0,
+      alphaUnmixStrength: ui.enableAlphaUnmix.checked ? parseInt(ui.alphaUnmixStrength.value) / 100 : 1.0,
+      adaptive: ui.enableAdaptive.checked,
+      adaptiveStrength: parseFloat(ui.adaptiveStrength.value),
+      colorSpread: ui.enableColorSpread.checked,
+      edgeBarrier: ui.enableEdgeBarrier.checked,
+      edgeBarrierThreshold: ui.enableEdgeBarrier.checked ? parseInt(ui.edgeBarrier.value) : 99999,
+      dirTol: ui.enableDirTol.checked,
+      dirBoostColor: ui.enableDirTol.checked ? hexToRgb(ui.dirBoostColor.value) : null,
+      dirBoostStrength: ui.enableDirTol.checked ? parseFloat(ui.dirBoostStrength.value) : 1,
+      dirWeakenColor: ui.enableDirTol.checked ? hexToRgb(ui.dirWeakenColor.value) : null,
+      dirWeakenStrength: ui.enableDirTol.checked ? parseFloat(ui.dirWeakenStrength.value) : 1,
+      zones: ui.enableZones.checked ? state.toleranceZones : [],
+      bgSamples: state.bgSamples,
+      showMask: ui.showMask.checked,
+      chromaKey: ui.enableChromaKey.checked ? {
+        hueCenter: parseInt(ui.chromaHueCenter.value),
+        hueRange:  parseInt(ui.chromaHueRange.value),
+        satMin:    parseInt(ui.chromaSatMin.value)
+      } : null,
+      // Matting
+      softAlpha:       ui.enableSoftAlpha.checked ? parseInt(ui.softAlpha.value) : 0,
+      erodeEdge:       ui.enableSoftAlpha.checked ? parseInt(ui.erodeEdge.value) : 0,
+      luminanceMatte:  ui.enableLumMatte.checked  ? parseInt(ui.lumMatte.value)  : 0,
+      spatialRamp:     ui.enableSpatialRamp.checked ? parseInt(ui.spatialRamp.value) : 0,
+      luminanceUnmask: ui.enableLumUnmask.checked ? parseInt(ui.lumUnmaskReach.value) : 0,
+      lumUnmaskThresh: ui.enableLumUnmask.checked ? parseInt(ui.lumUnmaskThresh.value) / 100 : 0.05,
+      alphaGrow:       ui.enableAlphaGrow.checked ? parseInt(ui.alphaGrowRadius.value) : 0,
+      alphaGrowStrength: ui.enableAlphaGrow.checked ? parseInt(ui.alphaGrowStrength.value) / 100 : 0.75
     };
   }
 
   function updatePreview() {
     if (!state.originalImage) return;
     ui.processingIndicator.classList.add('show');
-    // Allow UI to update before processing heavy task
     setTimeout(() => {
       performProcessing();
       ui.processingIndicator.classList.remove('show');
@@ -634,14 +1712,12 @@
 
     if (state.currentTab !== 'original') {
       const options = getProcessingOptions();
-      
       if (options.showMask) {
         visualizeDetection(ctx, getBackgroundColor(), options);
       } else {
         removeBackgroundWithOptions(ctx, getBackgroundColor(), options);
       }
 
-      // Draw seed markers visually on the preview
       if (options.borderOnly && state.seedPoints.length > 0) {
         ctx.fillStyle = '#ff6b6b';
         ctx.strokeStyle = '#ffffff';
@@ -653,14 +1729,24 @@
           ctx.stroke();
         }
       }
+      drawZoneOverlays();
+      // Cache the fully-rendered frame so zone rubber-band can reuse it
+      state.lastProcessedSnapshot = state.previewCtx.getImageData(
+        0, 0, state.previewCanvas.width, state.previewCanvas.height
+      );
     }
   }
 
-  /* ================= CORE ALGORITHMS ================= */
+  /* ===============================================================
+     CORE ALGORITHMS — IMPROVED
+     =============================================================== */
 
-  // Perceptual color distance function (Weighted RGB)
+  /**
+   * Perceptual color distance (weighted RGB squared).
+   * Weights: R=2, G=4, B=3 approximate human luminance sensitivity.
+   */
   function getColorDistSq(r1, g1, b1, r2, g2, b2) {
-    const dr = r1 - r2; const dg = g1 - g2; const db = b1 - b2;
+    const dr = r1 - r2, dg = g1 - g2, db = b1 - b2;
     return (2 * dr * dr) + (4 * dg * dg) + (3 * db * db);
   }
 
@@ -670,81 +1756,352 @@
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
     const pixelCount = width * height;
-    
-    // Convert 0-100 tolerance to a weighted squared threshold
-    const mappedTol = (options.tolerance / 100) * 255;
-    const toleranceSq = (2 * mappedTol*mappedTol) + (4 * mappedTol*mappedTol) + (3 * mappedTol*mappedTol);
 
+    // Map 0-100 tolerance to weighted squared threshold
+    const mappedTol = (options.tolerance / 100) * 255;
+    const baseTolSq = (2 + 4 + 3) * mappedTol * mappedTol;
+
+    const tolMap = buildToleranceMap(data, width, height, baseTolSq, options, bgColor);
+    const edgeMap = options.edgeBarrier ? computeSobelEdges(data, width, height) : null;
     const bgPixels = new Uint8Array(pixelCount);
 
-    // 1. Detection
-    if (options.borderOnly) floodFillEdges(data, width, height, bgColor, toleranceSq, bgPixels, state.seedPoints);
-    else identifyPixels(data, bgColor, toleranceSq, bgPixels);
-
-    // 2. Morphology (Separable Dilation - Much faster!)
-    if (options.morphology > 0) applySeparableMorphology(bgPixels, width, height, options.morphology);
-
-    // 3. Edge Distances (Strict 2-pass Manhattan)
-    const edgeDist = new Float32Array(pixelCount);
-    if (options.feather > 0 || options.bilateral > 0 || options.edgeEnhance > 0) {
-      computeDistances(bgPixels, width, height, edgeDist, Math.max(options.feather, options.bilateral));
+    // 1. Detection (flood fill or global)
+    if (options.borderOnly) {
+      floodFillEdges(data, width, height, bgColor, tolMap, bgPixels, state.seedPoints, options.bgSamples, edgeMap, options);
+    } else {
+      identifyPixels(data, bgColor, tolMap, bgPixels, options.bgSamples, options);
     }
 
-    // 4. Transparency & Compositing
-    applyTransparency(data, bgPixels, edgeDist, options, bgColor, width, height);
-    
-    // 5. Post-Process Alpha Smoothing (Box Blur on Alpha Channel)
-    if (options.multisample > 0) applyAlphaBlur(data, width, height, options.multisample);
+    // 1b. Luminance Unmask — PRE-TRANSPARENCY: restores strand-tip BG pixels using luminance
+    const unmaskAlpha = options.luminanceUnmask > 0 ? new Float32Array(pixelCount).fill(2) : null;
+    if (unmaskAlpha) applyLuminanceUnmask(data, bgPixels, width, height, options.luminanceUnmask, unmaskAlpha, options.lumUnmaskThresh || 0.05);
+
+    const toleranceSq = baseTolSq;
+    const trimReach = Math.max(options.smartTrim, options.alphaUnmix);
+    let trimDist = null;
+    if (trimReach > 0) {
+      trimDist = new Float32Array(pixelCount);
+      computeDistances(bgPixels, width, height, trimDist, trimReach + 2);
+    }
+
+    // 2. Morphology — separable dilation of bg mask
+    if (options.morphology > 0) applySeparableMorphology(bgPixels, width, height, options.morphology);
+
+    // 2b. Edge erode — shrinks BG mask boundary to create more softAlpha overlap
+    if ((options.erodeEdge || 0) > 0) erodeBgMask(bgPixels, width, height, options.erodeEdge);
+
+    // 3. Edge Distance Transform
+    const maxNeeded = Math.max(options.feather, options.colorPull > 0 ? options.feather + 2 : 0, 3);
+    const edgeDist = new Float32Array(pixelCount);
+    computeDistances(bgPixels, width, height, edgeDist, maxNeeded + 2);
+
+    // 4. Apply alpha: feathering + color-aware matting + softAlpha
+    applyTransparency(data, bgPixels, edgeDist, options, bgColor, toleranceSq, width, height);
+
+    // 5. Gaussian Alpha Smoothing
+    if (options.multisample > 0) applyGaussianAlphaBlur(data, width, height, options.multisample, edgeDist, options.gaussianReach);
+
+    // 6. Bilateral Alpha Filter
+    if (options.bilateral > 0) applyBilateralAlphaFilter(data, width, height, options.bilateral, edgeDist, options.bilateral * 3 + 3);
+
+    // 7. Smart Fringe Trim
+    applySmartTrim(data, trimDist, options, bgColor, toleranceSq);
+
+    // 8. Alpha Unmixing
+    applyAlphaUnmix(data, trimDist, options, bgColor);
+
+    // 9a. Spatial Ramp
+    if ((options.spatialRamp || 0) > 0) applySpatialRamp(data, bgPixels, width, height, options.spatialRamp);
+
+    // 9b. Luminance Matte
+    if ((options.luminanceMatte || 0) > 0) applyLuminanceMatte(data, bgPixels, edgeDist, width, height, options.luminanceMatte);
+
+    // 9c. Alpha Grow
+    if ((options.alphaGrow || 0) > 0) applyAlphaGrow(data, width, height, options.alphaGrow, options.alphaGrowStrength || 0.75);
+
+    // 9d. Apply luminance unmask ceiling — strand tips can't exceed luminance-predicted alpha
+    if (unmaskAlpha) {
+      for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+        if (unmaskAlpha[idx] < 2) data[i+3] = Math.min(data[i+3], Math.round(unmaskAlpha[idx] * 255));
+      }
+    }
+
+    // 10. Defringe
+    applyDefringe(data, edgeDist, options, bgColor);
+
+    // 11. Edge Sharpening
+    applyEdgeEnhance(data, edgeDist, options);
 
     ctx.putImageData(imgData, 0, 0);
   }
 
-  function identifyPixels(data, bgColor, toleranceSq, bgPixels) {
-    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
-      if (getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b) <= toleranceSq) {
-        bgPixels[idx] = 1;
+  /* ---------- Detection ---------- */
+
+  // ── buildToleranceMap ──────────────────────────────────────────────────────
+  // Creates a Float32Array of per-pixel effective tolerance² values.
+  // Combines: base tolerance, adaptive (variance-based), zone overrides.
+  function buildToleranceMap(data, width, height, baseTolSq, options, bgColor) {
+    const n = width * height;
+    const map = new Float32Array(n).fill(baseTolSq);
+
+    // ── Adaptive tolerance ────────────────────────────────────────────────
+    // Measure local color variance in a 5×5 neighborhood. Where the background
+    // has distortion/noise, variance is high → scale tolerance up proportionally.
+    if (options.adaptive && options.adaptiveStrength > 1) {
+      const RADIUS = 2; // 5×5 window
+      // Compute per-pixel luminance for fast variance estimate
+      const lum = new Float32Array(n);
+      for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+        lum[idx] = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
       }
+      // Separable box-filter mean then variance
+      const lumH = new Float32Array(n);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let s = 0, c = 0;
+          for (let dx = -RADIUS; dx <= RADIUS; dx++) {
+            const nx = x + dx;
+            if (nx >= 0 && nx < width) { s += lum[y*width+nx]; c++; }
+          }
+          lumH[y*width+x] = s/c;
+        }
+      }
+      const lumMean = new Float32Array(n);
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+          let s = 0, c = 0;
+          for (let dy = -RADIUS; dy <= RADIUS; dy++) {
+            const ny = y + dy;
+            if (ny >= 0 && ny < height) { s += lumH[ny*width+x]; c++; }
+          }
+          lumMean[y*width+x] = s/c;
+        }
+      }
+      // Variance pass: E[(X-mean)²]
+      const varH = new Float32Array(n);
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let s = 0, c = 0;
+          for (let dx = -RADIUS; dx <= RADIUS; dx++) {
+            const nx = x + dx;
+            if (nx >= 0 && nx < width) {
+              const d = lum[y*width+nx] - lumMean[y*width+nx];
+              s += d*d; c++;
+            }
+          }
+          varH[y*width+x] = s/c;
+        }
+      }
+      const variance = new Float32Array(n);
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+          let s = 0, c = 0;
+          for (let dy = -RADIUS; dy <= RADIUS; dy++) {
+            const ny = y + dy;
+            if (ny >= 0 && ny < height) { s += varH[ny*width+x]; c++; }
+          }
+          variance[y*width+x] = s/c;
+        }
+      }
+      // Normalize variance to [0,1] using 95th-percentile as ceiling
+      let maxVar = 0;
+      for (let i = 0; i < n; i++) if (variance[i] > maxVar) maxVar = variance[i];
+      const varCeil = maxVar * 0.95 || 1;
+      const maxScale = options.adaptiveStrength; // e.g. 3 → up to 3× base tolerance
+      for (let idx = 0; idx < n; idx++) {
+        const t = Math.min(1, variance[idx] / varCeil);
+        // Scale tolerance² proportionally. tolSq = (tol*scale)² = tol² * scale²
+        const scale = 1 + (maxScale - 1) * t;
+        map[idx] *= scale * scale;
+      }
+    }
+
+    // ── Zone overrides ────────────────────────────────────────────────────
+    // For each zone, override tolerance² for all pixels inside the rectangle.
+    if (options.zones && options.zones.length > 0) {
+      for (const z of options.zones) {
+        const mt = (z.tolerance / 100) * 255;
+        const zt = (2+4+3) * mt * mt;
+        for (let y = z.y1; y <= z.y2; y++) {
+          for (let x = z.x1; x <= z.x2; x++) {
+            map[y * width + x] = zt;
+          }
+        }
+      }
+    }
+
+    // ── Directional tolerance ────────────────────────────────────────────────
+    // For each pixel, project its color deviation from bgColor onto the boost/weaken
+    // direction vectors using weighted cosine similarity (same weighting as distSq).
+    // Alignment with boost direction → scale tolerance up (more permissive).
+    // Alignment with weaken direction → scale tolerance down (less permissive).
+    if (options.dirTol && bgColor && (options.dirBoostColor || options.dirWeakenColor)) {
+      const wR = 2, wG = 4, wB = 3; // perceptual weights, same as getColorDistSq
+
+      // Precompute direction vectors from bgColor (already in weighted space)
+      let bdR = 0, bdG = 0, bdB = 0, bdLen = 0;
+      if (options.dirBoostColor) {
+        bdR = options.dirBoostColor.r - bgColor.r;
+        bdG = options.dirBoostColor.g - bgColor.g;
+        bdB = options.dirBoostColor.b - bgColor.b;
+        bdLen = Math.sqrt(wR*bdR*bdR + wG*bdG*bdG + wB*bdB*bdB);
+      }
+      let wdR = 0, wdG = 0, wdB = 0, wdLen = 0;
+      if (options.dirWeakenColor) {
+        wdR = options.dirWeakenColor.r - bgColor.r;
+        wdG = options.dirWeakenColor.g - bgColor.g;
+        wdB = options.dirWeakenColor.b - bgColor.b;
+        wdLen = Math.sqrt(wR*wdR*wdR + wG*wdG*wdG + wB*wdB*wdB);
+      }
+
+      for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+        const pr = data[i]   - bgColor.r;
+        const pg = data[i+1] - bgColor.g;
+        const pb = data[i+2] - bgColor.b;
+        const pLen = Math.sqrt(wR*pr*pr + wG*pg*pg + wB*pb*pb);
+        if (pLen < 1) continue;
+
+        if (bdLen > 0) {
+          // Cosine similarity in weighted color space
+          const cos = (wR*pr*bdR + wG*pg*bdG + wB*pb*bdB) / (pLen * bdLen);
+          if (cos > 0) {
+            // Boost: scale tolerance² by scale² where scale = 1 + cos*(strength-1)
+            const scale = 1 + cos * (options.dirBoostStrength - 1);
+            map[idx] *= scale * scale;
+          }
+        }
+
+        if (wdLen > 0) {
+          const cos = (wR*pr*wdR + wG*pg*wdG + wB*pb*wdB) / (pLen * wdLen);
+          if (cos > 0) {
+            // Weaken: dirWeakenStrength is 0.05–1, scale² < 1 reduces tolerance
+            const scale = 1 - cos * (1 - options.dirWeakenStrength);
+            map[idx] *= scale * scale;
+          }
+        }
+      }
+    }
+
+    return map;
+  }
+
+  // Returns the minimum color distance² from a pixel to bgColor or any extra sample
+  function minDistToBackground(r, g, b, bgColor, bgSamples) {
+    let d = getColorDistSq(r, g, b, bgColor.r, bgColor.g, bgColor.b);
+    for (let s of bgSamples) {
+      const sd = getColorDistSq(r, g, b, s.r, s.g, s.b);
+      if (sd < d) d = sd;
+    }
+    return d;
+  }
+
+  function identifyPixels(data, bgColor, tolMap, bgPixels, bgSamples, options) {
+    const ck = options && options.chromaKey;
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const matchesBg     = minDistToBackground(r, g, b, bgColor, bgSamples) <= tolMap[idx];
+      const matchesChroma = pixelMatchesChromaKey(r, g, b, ck);
+      if (matchesBg || matchesChroma) bgPixels[idx] = 1;
     }
   }
 
-  function floodFillEdges(data, width, height, bgColor, toleranceSq, bgPixels, seedPoints) {
-    const queue = new Int32Array(width * height);
+  // Flood fill supporting:
+  //   - Color Spreading: neighbors compared against their parent's color (not bgColor)
+  //   - Edge Barrier: Sobel edge map blocks propagation across detected image edges
+  function floodFillEdges(data, width, height, bgColor, tolMap, bgPixels, seedPoints, bgSamples, edgeMap, options) {
+    const n = width * height;
+    const colorSpread = options && options.colorSpread;
+    const edgeThreshold = (options && options.edgeBarrierThreshold) || 99999;
+
+    const queue = new Int32Array(n);
+    // When color spreading, carry the parent pixel's color in parallel arrays
+    // so each propagation step uses the local reference instead of bgColor.
+    const spreadR = colorSpread ? new Uint8Array(n) : null;
+    const spreadG = colorSpread ? new Uint8Array(n) : null;
+    const spreadB = colorSpread ? new Uint8Array(n) : null;
     let head = 0, tail = 0;
-    
-    const checkPush = (idx) => {
+
+    const checkPush = (idx, refR, refG, refB) => {
+      if (bgPixels[idx]) return;
+      // Edge barrier: block crossing strong image edges
+      if (edgeMap && edgeMap[idx] > edgeThreshold) return;
       const i = idx * 4;
-      if (!bgPixels[idx] && getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b) <= toleranceSq) {
+      const r = data[i], g = data[i+1], b = data[i+2];
+      // A pixel is background if it matches: (a) the bg/sample colors globally,
+      // OR (b) its parent's color locally (when color spreading is on).
+      const matchesBg     = minDistToBackground(r, g, b, bgColor, bgSamples) <= tolMap[idx];
+      const matchesRef    = colorSpread && getColorDistSq(r, g, b, refR, refG, refB) <= tolMap[idx];
+      const matchesChroma = pixelMatchesChromaKey(r, g, b, options && options.chromaKey);
+      if (matchesBg || matchesRef || matchesChroma) {
         bgPixels[idx] = 1;
-        queue[tail++] = idx;
+        queue[tail] = idx;
+        if (colorSpread) { spreadR[tail] = r; spreadG[tail] = g; spreadB[tail] = b; }
+        tail++;
       }
     };
 
-    for (let x = 0; x < width; x++) { checkPush(x); checkPush((height - 1) * width + x); }
-    for (let y = 1; y < height - 1; y++) { checkPush(y * width); checkPush(y * width + width - 1); }
-
-    // Inject custom user seeds
+    // Seed from image border using bgColor as initial reference
+    const sr = bgColor.r, sg = bgColor.g, sb = bgColor.b;
+    for (let x = 0; x < width; x++) {
+      checkPush(x, sr, sg, sb);
+      checkPush((height - 1) * width + x, sr, sg, sb);
+    }
+    for (let y = 1; y < height - 1; y++) {
+      checkPush(y * width, sr, sg, sb);
+      checkPush(y * width + width - 1, sr, sg, sb);
+    }
     if (seedPoints && seedPoints.length > 0) {
-      for (let pt of seedPoints) {
-        const idx = pt.y * width + pt.x;
-        checkPush(idx);
-      }
+      for (let pt of seedPoints) checkPush(pt.y * width + pt.x, sr, sg, sb);
     }
 
     while (head < tail) {
-      const p = queue[head++];
-      const x = p % width; const y = Math.floor(p / width);
-      if (x > 0) checkPush(p - 1);
-      if (x < width - 1) checkPush(p + 1);
-      if (y > 0) checkPush(p - width);
-      if (y < height - 1) checkPush(p + width);
+      const p = queue[head];
+      // In spreading mode, each pixel passes its own color as reference to its children
+      const refR = colorSpread ? spreadR[head] : sr;
+      const refG = colorSpread ? spreadG[head] : sg;
+      const refB = colorSpread ? spreadB[head] : sb;
+      head++;
+      const x = p % width, y = (p / width) | 0;
+      if (x > 0)           checkPush(p - 1,     refR, refG, refB);
+      if (x < width - 1)   checkPush(p + 1,     refR, refG, refB);
+      if (y > 0)           checkPush(p - width,  refR, refG, refB);
+      if (y < height - 1)  checkPush(p + width,  refR, refG, refB);
     }
   }
+
+  // Sobel edge detection — returns per-pixel gradient magnitude (float).
+  // Used by the Edge Barrier to prevent the flood fill from crossing image edges.
+  // Magnitude is in luminance-gradient units; typical strong edges are 200–1000+.
+  function computeSobelEdges(data, width, height) {
+    const n = width * height;
+    const lum = new Float32Array(n);
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      lum[idx] = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+    }
+    const edges = new Float32Array(n);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        // Clamp-to-edge sampling
+        const y0 = Math.max(0, y-1), y2 = Math.min(height-1, y+1);
+        const x0 = Math.max(0, x-1), x2 = Math.min(width-1, x+1);
+        const tl = lum[y0*width+x0], tm = lum[y0*width+x],  tr = lum[y0*width+x2];
+        const ml = lum[y *width+x0],                          mr = lum[y *width+x2];
+        const bl = lum[y2*width+x0], bm = lum[y2*width+x],  br = lum[y2*width+x2];
+        const gx = -tl - 2*ml - bl + tr + 2*mr + br;
+        const gy = -tl - 2*tm - tr + bl + 2*bm + br;
+        edges[y*width+x] = Math.sqrt(gx*gx + gy*gy);
+      }
+    }
+    return edges;
+  }
+
+  /* ---------- Morphology ---------- */
 
   function applySeparableMorphology(bgPixels, width, height, kernelSize) {
     const radius = Math.floor(kernelSize / 2);
     const temp = new Uint8Array(width * height);
-    
-    // Horizontal
+
+    // Horizontal dilation
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         let isBg = 0;
@@ -755,7 +2112,8 @@
         temp[y * width + x] = isBg;
       }
     }
-    // Vertical
+
+    // Vertical dilation
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
         let isBg = 0;
@@ -768,107 +2126,580 @@
     }
   }
 
+  /* ---------- Distance Transform — Diagonal-Aware ----------
+   *
+   * Improvement over original: 4-pass DT that propagates diagonals (D≈1.414)
+   * as well as axis-aligned (D=1.0) steps. This gives a much better
+   * approximation to true Euclidean distance, which produces smoother
+   * circular feather falloff instead of diamond-shaped artifacts.
+   */
   function computeDistances(bgPixels, width, height, edgeDist, maxDist) {
     const INF = maxDist + 2;
     for (let i = 0; i < bgPixels.length; i++) edgeDist[i] = bgPixels[i] ? 0 : INF;
-    
-    // Pass 1: Top-Left -> Bottom-Right
+
+    const D1 = 1.0;      // cardinal step cost
+    const D2 = 1.4142;   // diagonal step cost (~sqrt(2))
+
+    // Pass 1: top-left → bottom-right
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        if (edgeDist[idx] > 0) {
-          let minD = edgeDist[idx];
-          if (x > 0) minD = Math.min(minD, edgeDist[idx - 1] + 1);
-          if (y > 0) minD = Math.min(minD, edgeDist[idx - width] + 1);
-          edgeDist[idx] = minD;
-        }
+        if (edgeDist[idx] === 0) continue;
+        let m = edgeDist[idx];
+        if (x > 0)               m = Math.min(m, edgeDist[idx - 1]         + D1);
+        if (y > 0)               m = Math.min(m, edgeDist[idx - width]     + D1);
+        if (x > 0 && y > 0)     m = Math.min(m, edgeDist[idx - width - 1] + D2);
+        if (x < width-1 && y > 0) m = Math.min(m, edgeDist[idx - width + 1] + D2);
+        edgeDist[idx] = m;
       }
     }
-    // Pass 2: Bottom-Right -> Top-Left
+
+    // Pass 2: bottom-right → top-left
     for (let y = height - 1; y >= 0; y--) {
       for (let x = width - 1; x >= 0; x--) {
         const idx = y * width + x;
-        if (edgeDist[idx] > 0) {
-          let minD = edgeDist[idx];
-          if (x < width - 1) minD = Math.min(minD, edgeDist[idx + 1] + 1);
-          if (y < height - 1) minD = Math.min(minD, edgeDist[idx + width] + 1);
-          edgeDist[idx] = minD;
-        }
+        if (edgeDist[idx] === 0) continue;
+        let m = edgeDist[idx];
+        if (x < width - 1)                 m = Math.min(m, edgeDist[idx + 1]         + D1);
+        if (y < height - 1)                m = Math.min(m, edgeDist[idx + width]     + D1);
+        if (x < width-1 && y < height-1)   m = Math.min(m, edgeDist[idx + width + 1] + D2);
+        if (x > 0 && y < height-1)         m = Math.min(m, edgeDist[idx + width - 1] + D2);
+        edgeDist[idx] = m;
+      }
+    }
+
+    // Pass 3: top-right → bottom-left
+    for (let y = 0; y < height; y++) {
+      for (let x = width - 1; x >= 0; x--) {
+        const idx = y * width + x;
+        if (edgeDist[idx] === 0) continue;
+        let m = edgeDist[idx];
+        if (x < width - 1)               m = Math.min(m, edgeDist[idx + 1]         + D1);
+        if (y > 0)                        m = Math.min(m, edgeDist[idx - width]     + D1);
+        if (x < width-1 && y > 0)        m = Math.min(m, edgeDist[idx - width + 1] + D2);
+        if (x > 0 && y > 0)              m = Math.min(m, edgeDist[idx - width - 1] + D2);
+        edgeDist[idx] = m;
+      }
+    }
+
+    // Pass 4: bottom-left → top-right
+    for (let y = height - 1; y >= 0; y--) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (edgeDist[idx] === 0) continue;
+        let m = edgeDist[idx];
+        if (x > 0)                        m = Math.min(m, edgeDist[idx - 1]         + D1);
+        if (y < height - 1)               m = Math.min(m, edgeDist[idx + width]     + D1);
+        if (x > 0 && y < height-1)        m = Math.min(m, edgeDist[idx + width - 1] + D2);
+        if (x < width-1 && y < height-1)  m = Math.min(m, edgeDist[idx + width + 1] + D2);
+        edgeDist[idx] = m;
       }
     }
   }
 
-  function applyTransparency(data, bgPixels, edgeDist, options, bgColor, width, height) {
+  /* ---------- Alpha Matting — applyTransparency ----------
+   *
+   * Step 4 of the pipeline. Responsibilities:
+   *   1. Mark all detected background pixels as fully transparent (alpha=0).
+   *   2. Feathering: smoothstep alpha falloff over [0 … feather] px from edge.
+   *   3. Color-Aware Matting: multiplies alpha down for foreground-zone pixels
+   *      whose color still resembles the background. Controlled by colorPull.
+   *   4. Soft Alpha: makes near-BG-colored pixels in the edge band semi-transparent
+   *      instead of fully opaque. Essential for hair strands on light BGs.
+   *
+   * Defringe and Edge Sharpening have been extracted to steps 9–10 so they
+   * operate on the final, fully-settled alpha values rather than this rough pass.
+   */
+  function applyTransparency(data, bgPixels, edgeDist, options, bgColor, toleranceSq, width, height) {
+    const colorPullStrength = options.colorPull / 100;
+    const doSoft = (options.softAlpha || 0) > 0;
+    // softAlpha zones: 1→9×, 2→36×, 3→100× tolerance (hair tips become semi-transparent)
+    const softFactors = [0, 9, 36, 100];
+    const softZoneSq  = doSoft ? toleranceSq * softFactors[Math.min(3, options.softAlpha)] : 0;
+    // CRITICAL: softAlpha only within edge band (erodeEdge + feather zone). NOT globally.
+    // Without this limit softAlpha makes entire dark subjects transparent.
+    const softReach = doSoft ? (options.erodeEdge || 0) + Math.max(options.feather || 0, 4) + 3 : 0;
+
     for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
       if (bgPixels[idx]) {
         data[i + 3] = 0;
+        continue;
+      }
+
+      const dist = edgeDist[idx];
+      let alpha = 1.0;
+
+      // Feathering: pure smoothstep on distance
+      if (options.feather > 0 && dist < options.feather) {
+        const t = dist / options.feather;
+        alpha = t * t * (3 - 2 * t);
+      }
+
+      // Color-Aware Matting
+      if (colorPullStrength > 0 && dist < Math.max(options.feather, 4) + 2) {
+        const colorDistSq = getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b);
+        const colorRatio = Math.min(1.0, colorDistSq / (toleranceSq * 3));
+        const colorAlpha = Math.pow(colorRatio, 0.6);
+        alpha *= (1 - colorPullStrength) + colorAlpha * colorPullStrength;
+      }
+
+      // Soft Alpha: edge-band only, makes near-BG pixels semi-transparent
+      if (doSoft && dist <= softReach) {
+        const cd = getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b);
+        if (cd < softZoneSq) {
+          const t = Math.sqrt(cd / softZoneSq); // 0 at BG color, 1 at zone edge
+          alpha *= t;
+        }
+      }
+
+      alpha = Math.max(0, Math.min(1, alpha));
+      data[i + 3] = Math.round(alpha * 255);
+    }
+  }
+
+  // Erodes the BG mask boundary by `iterations` pixels.
+  // Creates more overlap between the flood-fill and the hair edge zone —
+  // so softAlpha gets more pixels to work with.
+  function erodeBgMask(bgPixels, w, h, iterations) {
+    const n = w * h;
+    const buf = new Uint8Array(n);
+    for (let iter = 0; iter < iterations; iter++) {
+      buf.set(bgPixels);
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const idx = y * w + x;
+          if (!bgPixels[idx]) continue;
+          if (!bgPixels[idx-1] || !bgPixels[idx+1] || !bgPixels[idx-w] || !bgPixels[idx+w])
+            buf[idx] = 0;
+        }
+      }
+      bgPixels.set(buf);
+    }
+  }
+
+  // Smart Fringe Trim — threshold-based hard cut. Runs AFTER Gaussian blur.
+  // Within trimReach pixels of the pre-morphology boundary:
+  //   pixel color ≈ background (within tolerance × sensitivity) → alpha = 0
+  //   pixel color clearly different                              → alpha unchanged
+  // A smoothstep at the threshold provides 1–2px of anti-aliasing.
+  function applySmartTrim(data, trimDist, options, bgColor, toleranceSq) {
+    if (!trimDist || options.smartTrim <= 0) return;
+    const trimThreshSq = toleranceSq * options.smartTrimSens + 500;
+    const band = trimThreshSq * 0.3 + 1;
+
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const td = trimDist[idx];
+      if (td <= 0 || td > options.smartTrim) continue;
+
+      const colorDistSq = getColorDistSq(
+        data[i], data[i+1], data[i+2],
+        bgColor.r, bgColor.g, bgColor.b
+      );
+
+      if (colorDistSq <= trimThreshSq) {
+        data[i + 3] = 0;
       } else {
-        let alpha = 255;
-        const distance = edgeDist[idx];
-
-        // Cubic Feathering (Smoothstep)
-        if (options.feather > 0 && distance < options.feather) {
-          const t = distance / options.feather;
-          alpha = Math.floor(t * t * (3 - 2 * t) * 255);
-        }
-
-        // True Hue Despill
-        if (options.despill > 0 && alpha < 255) {
-          const blend = alpha / 255;
-          const strength = (options.despill / 100) * (1 - blend);
-          
-          // Push color away from background instead of arbitrary subtract
-          data[i] = Math.max(0, Math.min(255, data[i] + (data[i] - bgColor.r) * strength));
-          data[i+1] = Math.max(0, Math.min(255, data[i+1] + (data[i+1] - bgColor.g) * strength));
-          data[i+2] = Math.max(0, Math.min(255, data[i+2] + (data[i+2] - bgColor.b) * strength));
-        }
-
-        // Edge Enhance
-        if (options.edgeEnhance > 0 && distance > 0 && distance <= 2) {
-          const boost = (1 - distance / 2) * (options.edgeEnhance / 100) * 255;
-          alpha = Math.min(255, alpha + boost);
-        }
-
-        data[i + 3] = alpha;
+        const t = Math.min(1.0, (colorDistSq - trimThreshSq) / band);
+        const trimAlpha = Math.round(t * t * (3 - 2 * t) * 255);
+        data[i + 3] = Math.min(data[i + 3], trimAlpha);
       }
     }
   }
 
-  function applyAlphaBlur(data, width, height, radius) {
-    const tempAlpha = new Uint8Array(width * height);
-    for(let i = 0; i < data.length; i += 4) tempAlpha[i/4] = data[i+3];
+  // Alpha Unmixing — mathematical background extraction.
+  // Models each fringe pixel as a blend: C = alpha * Fg + (1-alpha) * Bg
+  // Solves for alpha from color distance, then extracts pure foreground color.
+  //   alpha = sqrt(colorDist(pixel, bg) / maxColorDist) ^ strength
+  //   Fg = (C - (1-alpha)*Bg) / alpha
+  // A grey pixel on white bg becomes black at the correct partial opacity —
+  // when composited back on white it looks identical to the original pixel.
+  function applyAlphaUnmix(data, trimDist, options, bgColor) {
+    if (!trimDist || options.alphaUnmix <= 0) return;
+
+    const strength = options.alphaUnmixStrength;
+    const oppR = bgColor.r > 127 ? 0 : 255;
+    const oppG = bgColor.g > 127 ? 0 : 255;
+    const oppB = bgColor.b > 127 ? 0 : 255;
+    const maxDistSq = getColorDistSq(oppR, oppG, oppB, bgColor.r, bgColor.g, bgColor.b);
+
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const td = trimDist[idx];
+      if (td <= 0 || td > options.alphaUnmix) continue;
+
+      const r = data[i], g = data[i+1], b = data[i+2];
+      const colorDistSq = getColorDistSq(r, g, b, bgColor.r, bgColor.g, bgColor.b);
+      const alphaNorm = Math.sqrt(colorDistSq / maxDistSq);
+      const alpha = Math.min(1.0, Math.pow(alphaNorm, strength));
+
+      if (alpha < 0.01) {
+        data[i + 3] = 0;
+        continue;
+      }
+
+      const invA = 1.0 - alpha;
+      data[i]     = Math.round(Math.max(0, Math.min(255, (r - invA * bgColor.r) / alpha)));
+      data[i + 1] = Math.round(Math.max(0, Math.min(255, (g - invA * bgColor.g) / alpha)));
+      data[i + 2] = Math.round(Math.max(0, Math.min(255, (b - invA * bgColor.b) / alpha)));
+      data[i + 3] = Math.min(data[i + 3], Math.round(alpha * 255));
+    }
+  }
+
+
+  /* ---------- Bilateral Alpha Filter ----------
+   *
+   * Edge-preserving smoothing on the alpha channel.
+   * Unlike Gaussian (which blurs across edges), bilateral weights neighbours
+   * by both spatial proximity AND alpha similarity — so sharp alpha transitions
+   * (the actual edge of the subject) are preserved while uniform noisy areas
+   * (patchy semi-transparent regions) are smoothed.
+   *
+   * Only processes semi-transparent pixels (0 < alpha < 255) — fully opaque
+   * and fully transparent pixels are untouched, limiting work to the edge zone.
+   *
+   * strength (1–10): sets the spatial kernel radius directly in pixels.
+   */
+  /* ---------- Bilateral Alpha Filter — LUT-optimised ----------
+   *
+   * Performance improvements over naive O(n×r²×2exp) version:
+   *   1. Spatial kernel precomputed once as a flat Float32Array → eliminates
+   *      Math.exp per neighbor per pixel (replaced by array lookup).
+   *   2. Range weight LUT[0..255] precomputed → eliminates Math.exp per pixel
+   *      per neighbor (replaced by integer-indexed lookup).
+   *   3. edgeDist + edgeReach gate: skips pixels far from the edge so the
+   *      O(r²) inner loop only runs on the thin edge zone, not the whole image.
+   *
+   * On a 4000×3000 image with radius=3: was ~5 billion exp() calls, now ~0.
+   * Typical speed-up: 30–60× for large images.
+   */
+  function applyBilateralAlphaFilter(data, width, height, strength, edgeDist, edgeReach) {
+    const radius    = Math.max(1, Math.round(strength));
+    const sigmaS    = Math.max(0.8, radius * 0.5);
+    const sigmaR    = 40;
+    const n         = width * height;
+    const kw        = 2 * radius + 1;
+    const inv2SigS  = 1 / (2 * sigmaS * sigmaS);
+    const inv2SigR  = 1 / (2 * sigmaR * sigmaR);
+
+    // Precompute spatial kernel — (2r+1)² values, reused for every pixel
+    const spatialK = new Float32Array(kw * kw);
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        spatialK[(dy + radius) * kw + (dx + radius)] =
+          Math.exp(-(dx * dx + dy * dy) * inv2SigS);
+      }
+    }
+
+    // Precompute range weight LUT for integer diff 0..255
+    const rangeLUT = new Float32Array(256);
+    for (let i = 0; i < 256; i++) rangeLUT[i] = Math.exp(-i * i * inv2SigR);
+
+    // Snapshot alpha — read from snapshot, write to data to avoid in-place artifacts
+    const alphaIn = new Uint8Array(n);
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) alphaIn[idx] = data[i + 3];
+
+    const useEdgeLimit = edgeDist != null && edgeReach > 0;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        const ca  = alphaIn[idx];
+        // Skip fully opaque/transparent — only edge zone pixels need smoothing
+        if (ca === 0 || ca === 255) continue;
+        // Skip pixels far from the detected edge (major performance win on large images)
+        if (useEdgeLimit && edgeDist[idx] > edgeReach) continue;
+
+        let sumW = 0, sumA = 0;
+        for (let dy = -radius; dy <= radius; dy++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= height) continue;
+          for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx;
+            if (nx < 0 || nx >= width) continue;
+            const na   = alphaIn[ny * width + nx];
+            const sw   = spatialK[(dy + radius) * kw + (dx + radius)];
+            const diff = ca > na ? ca - na : na - ca; // |ca - na|, no branch misprediction
+            const w    = sw * rangeLUT[diff];
+            sumW += w;
+            sumA += w * na;
+          }
+        }
+        data[idx * 4 + 3] = sumW > 0 ? Math.round(sumA / sumW) : ca;
+      }
+    }
+  }
+
+  /* ---------- Defringe (Color Spill Correction) ----------
+   *
+   * Extracted from applyTransparency so it runs AFTER alpha is fully
+   * finalised by SmartTrim and AlphaUnmix.
+   *
+   * Formula: Fg = (C − (1−α)·Bg) / α
+   * Solves the compositing equation for the pure foreground colour,
+   * removing background-light contamination from semi-transparent edge pixels.
+   */
+  function applyDefringe(data, edgeDist, options, bgColor) {
+    if (options.despill <= 0) return;
+    const despillStrength = options.despill / 100;
+    // Reach is kept inside the edgeDist computation zone (maxNeeded+2).
+    // maxNeeded = max(feather, colorPull>0 ? feather+2 : 0, 3)
+    // We conservatively use the same feather-based bound so we never
+    // read INF sentinel values from the distance transform.
+    const reach = Math.max(options.feather, 3) + 2;
+
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (edgeDist[idx] === 0 || edgeDist[idx] > reach) continue;
+      const alpha = data[i + 3] / 255;
+      if (alpha <= 0.04 || alpha >= 0.98) continue;
+
+      const invAlpha = 1 - alpha;
+      const fgR = (data[i]   - invAlpha * bgColor.r) / alpha;
+      const fgG = (data[i+1] - invAlpha * bgColor.g) / alpha;
+      const fgB = (data[i+2] - invAlpha * bgColor.b) / alpha;
+      data[i]   = Math.round(Math.max(0, Math.min(255, data[i]   + (fgR - data[i])   * despillStrength)));
+      data[i+1] = Math.round(Math.max(0, Math.min(255, data[i+1] + (fgG - data[i+1]) * despillStrength)));
+      data[i+2] = Math.round(Math.max(0, Math.min(255, data[i+2] + (fgB - data[i+2]) * despillStrength)));
+    }
+  }
+
+  /* ---------- Edge Sharpening ----------
+   *
+   * Extracted from applyTransparency so it runs LAST in the pipeline,
+   * after Gaussian blur, Smart Trim, Alpha Unmixing and Defringe.
+   * Running it earlier caused Gaussian to immediately undo the sharpening.
+   *
+   * Boosts alpha upward for pixels within 3px of the edge boundary,
+   * producing a crisper, harder edge.
+   */
+  function applyEdgeEnhance(data, edgeDist, options) {
+    if (options.edgeEnhance <= 0) return;
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const dist = edgeDist[idx];
+      if (dist === 0 || dist > 3) continue;
+      const boost = (1 - dist / 3) * (options.edgeEnhance / 100);
+      data[i + 3] = Math.min(255, Math.round(data[i + 3] + boost * 255));
+    }
+  }
+
+  /* ---------- Gaussian Alpha Blur ----------
+   *
+   * Replaces the original box blur.  Box blur creates noticeable square
+   * "halo rings" around cutout edges.  A Gaussian blur (with separable
+   * horizontal + vertical passes) produces a smooth circular falloff.
+   *
+   * Uses edge-normalised weights so boundary pixels aren't dimmed.
+   */
+  // Gaussian blur in premultiplied alpha space.
+  // The old version only blurred the alpha channel, leaving RGB untouched.
+  // This caused transparent background pixels (e.g. white, alpha=0) to get
+  // their alpha raised by the blur while keeping RGB=(255,255,255), making
+  // them composite as semi-transparent white — reintroducing the background.
+  //
+  // Fix: convert to premultiplied (pR = R * A/255) before blurring, then
+  // unpremultiply after. Transparent pixels contribute pRGB=(0,0,0), so
+  // blurred edge pixels inherit their color from opaque neighbors only.
+  function applyGaussianAlphaBlur(data, width, height, sigma, edgeDist, reach) {
+    if (sigma <= 0) return;
+
+    const radius = Math.ceil(sigma * 2.5);
+    const kernelSize = 2 * radius + 1;
+    const kernel = new Float32Array(kernelSize);
+    let ksum = 0;
+    for (let k = 0; k < kernelSize; k++) {
+      const x = k - radius;
+      kernel[k] = Math.exp(-(x * x) / (2 * sigma * sigma));
+      ksum += kernel[k];
+    }
+    for (let k = 0; k < kernelSize; k++) kernel[k] /= ksum;
+
+    const n = width * height;
+    // Premultiplied RGBA channels as floats
+    const pR = new Float32Array(n), pG = new Float32Array(n),
+          pB = new Float32Array(n), pA = new Float32Array(n);
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const a = data[i + 3] / 255;
+      pR[idx] = data[i]     * a;
+      pG[idx] = data[i + 1] * a;
+      pB[idx] = data[i + 2] * a;
+      pA[idx] = data[i + 3];
+    }
+
+    const hR = new Float32Array(n), hG = new Float32Array(n),
+          hB = new Float32Array(n), hA = new Float32Array(n);
 
     // Horizontal pass
     for (let y = 0; y < height; y++) {
+      const row = y * width;
       for (let x = 0; x < width; x++) {
-        let sum = 0, count = 0;
-        for (let dx = -radius; dx <= radius; dx++) {
-          const nx = x + dx;
+        let sr = 0, sg = 0, sb = 0, sa = 0, w = 0;
+        for (let k = 0; k < kernelSize; k++) {
+          const nx = x + k - radius;
           if (nx >= 0 && nx < width) {
-            sum += tempAlpha[y * width + nx];
-            count++;
+            const kw = kernel[k], ni = row + nx;
+            sr += kw * pR[ni]; sg += kw * pG[ni];
+            sb += kw * pB[ni]; sa += kw * pA[ni];
+            w += kw;
           }
         }
-        data[(y * width + x) * 4 + 3] = sum / count;
+        const oi = row + x;
+        hR[oi] = sr/w; hG[oi] = sg/w; hB[oi] = sb/w; hA[oi] = sa/w;
       }
     }
-    
-    // Copy back for vertical pass
-    for(let i = 0; i < data.length; i += 4) tempAlpha[i/4] = data[i+3];
 
-    // Vertical pass
+    // Vertical pass + write back unpremultiplied, only within reach of the edge
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < height; y++) {
-        let sum = 0, count = 0;
-        for (let dy = -radius; dy <= radius; dy++) {
-          const ny = y + dy;
+        const idx = y * width + x;
+        // Skip pixels outside the edge reach zone
+        if (reach > 0 && edgeDist && edgeDist[idx] > reach) continue;
+        let sr = 0, sg = 0, sb = 0, sa = 0, w = 0;
+        for (let k = 0; k < kernelSize; k++) {
+          const ny = y + k - radius;
           if (ny >= 0 && ny < height) {
-            sum += tempAlpha[ny * width + x];
-            count++;
+            const kw = kernel[k], ni = ny * width + x;
+            sr += kw * hR[ni]; sg += kw * hG[ni];
+            sb += kw * hB[ni]; sa += kw * hA[ni];
+            w += kw;
           }
         }
-        data[(y * width + x) * 4 + 3] = sum / count;
+        const oi = idx * 4;
+        const a = sa / w;
+        data[oi + 3] = Math.round(a);
+        if (a > 0) {
+          const inv = 255 / a;
+          data[oi]     = Math.round(Math.min(255, sr / w * inv));
+          data[oi + 1] = Math.round(Math.min(255, sg / w * inv));
+          data[oi + 2] = Math.round(Math.min(255, sb / w * inv));
+        }
       }
+    }
+  }
+
+  /* ---------- Detection Visualizer ---------- */
+  // ── Spatial Ramp ─────────────────────────────────────────────────────────────
+  // BFS distance from BG boundary → alpha = dist/rampWidth. Purely spatial.
+  function applySpatialRamp(data, bgPixels, w, h, rampWidth) {
+    if (rampWidth <= 0) return;
+    const n = w * h;
+    const dist = new Uint16Array(n).fill(65535);
+    const queue = new Int32Array(n * 2); let qh = 0, qt = 0;
+    for (let idx = 0; idx < n; idx++) {
+      if (!bgPixels[idx]) continue;
+      dist[idx] = 0;
+      const x = idx % w, y = (idx / w) | 0;
+      const nb = [x>0?idx-1:-1, x<w-1?idx+1:-1, y>0?idx-w:-1, y<h-1?idx+w:-1];
+      for (const ni of nb) { if (ni >= 0 && !bgPixels[ni] && dist[ni] > 1) { dist[ni] = 1; queue[qt++] = ni; } }
+    }
+    while (qh < qt) {
+      const idx = queue[qh++], d = dist[idx]; if (d >= rampWidth) continue;
+      const x = idx % w, y = (idx / w) | 0, nd = d + 1;
+      const nb = [x>0?idx-1:-1, x<w-1?idx+1:-1, y>0?idx-w:-1, y<h-1?idx+w:-1];
+      for (const ni of nb) { if (ni >= 0 && !bgPixels[ni] && dist[ni] > nd) { dist[ni] = nd; queue[qt++] = ni; } }
+    }
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (bgPixels[idx]) continue;
+      const d = dist[idx];
+      if (d <= rampWidth && d < 65535) data[i+3] = Math.min(data[i+3], Math.round(d / rampWidth * 255));
+    }
+  }
+
+  // ── Luminance Matte ───────────────────────────────────────────────────────────
+  // alpha = (bgLum − pixelLum) / (bgLum − fgLum) within `reach` px of edge.
+  function applyLuminanceMatte(data, bgPixels, edgeDist, w, h, reach) {
+    if (reach <= 0) return;
+    const n = w * h;
+    let bgSum = 0, bgN = 0, fgSum = 0, fgN = 0;
+    const fgMinDist = Math.max(reach + 3, 8);
+    for (let idx = 0; idx < n; idx++) {
+      const i = idx * 4, lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      if (bgPixels[idx]) { bgSum += lum; bgN++; }
+      else if (edgeDist[idx] >= fgMinDist) { fgSum += lum; fgN++; }
+    }
+    if (!bgN || !fgN) return;
+    const bgLum = bgSum / bgN, fgLum = fgSum / fgN, lumRange = bgLum - fgLum;
+    if (lumRange < 20) return;
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (bgPixels[idx] || edgeDist[idx] > reach) continue;
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      const alpha = Math.max(0, Math.min(1, (bgLum - lum) / lumRange));
+      data[i+3] = Math.min(data[i+3], Math.round(alpha * 255));
+    }
+  }
+
+  // ── Luminance Unmask ──────────────────────────────────────────────────────────
+  // Pre-transparency: un-marks BG-labelled strand-tip pixels using luminance physics.
+  // Runs BEFORE applyTransparency so the pipeline never forces them to alpha=0.
+  function applyLuminanceUnmask(data, bgPixels, w, h, reach, unmaskAlpha, threshold) {
+    threshold = threshold || 0.05;
+    const n = w * h;
+    let bgSum = 0, bgN = 0;
+    for (let idx = 0; idx < n; idx++) {
+      if (!bgPixels[idx]) continue;
+      const i = idx * 4;
+      bgSum += 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]; bgN++;
+    }
+    if (!bgN) return;
+    const bgLum = bgSum / bgN;
+    const hist = new Uint32Array(256); let nonBgN = 0;
+    for (let idx = 0; idx < n; idx++) {
+      if (bgPixels[idx]) continue;
+      const i = idx * 4;
+      hist[Math.min(255, Math.round(0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]))]++;
+      nonBgN++;
+    }
+    if (!nonBgN) return;
+    const fgTarget = Math.max(1, Math.floor(nonBgN * 0.1));
+    let fgSum = 0, fgCount = 0, fgLum = 80;
+    for (let v = 0; v < 256 && fgCount < fgTarget; v++) {
+      const take = Math.min(hist[v], fgTarget - fgCount); fgSum += v * take; fgCount += take;
+    }
+    if (fgCount > 0) fgLum = fgSum / fgCount;
+    const lumRange = bgLum - fgLum;
+    if (lumRange < 30) return;
+    const bgBoundDist = new Uint16Array(n).fill(65535);
+    const queue = new Int32Array(n * 2); let qh = 0, qt = 0;
+    for (let idx = 0; idx < n; idx++) {
+      if (!bgPixels[idx]) continue;
+      const x = idx % w, y = (idx / w) | 0;
+      const nb = [x>0?idx-1:-1, x<w-1?idx+1:-1, y>0?idx-w:-1, y<h-1?idx+w:-1];
+      for (const ni of nb) { if (ni >= 0 && !bgPixels[ni]) { bgBoundDist[idx] = 1; queue[qt++] = idx; break; } }
+    }
+    while (qh < qt) {
+      const idx = queue[qh++], d = bgBoundDist[idx]; if (d >= reach) continue;
+      const x = idx % w, y = (idx / w) | 0, nd = d + 1;
+      const nb = [x>0?idx-1:-1, x<w-1?idx+1:-1, y>0?idx-w:-1, y<h-1?idx+w:-1];
+      for (const ni of nb) { if (ni >= 0 && bgPixels[ni] && bgBoundDist[ni] > nd) { bgBoundDist[ni] = nd; queue[qt++] = ni; } }
+    }
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      if (!bgPixels[idx] || bgBoundDist[idx] > reach || bgBoundDist[idx] === 65535) continue;
+      const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+      const alpha = Math.max(0, Math.min(1, (bgLum - lum) / lumRange));
+      if (alpha > threshold) { bgPixels[idx] = 0; unmaskAlpha[idx] = alpha; }
+    }
+  }
+
+  // ── Alpha Grow ────────────────────────────────────────────────────────────────
+  // Spreads alpha from solid subject pixels outward. Hair strand tips (alpha=0)
+  // adjacent to solid roots (alpha=255) get restored proportionally by distance.
+  function applyAlphaGrow(data, w, h, radius, strength) {
+    const n = w * h;
+    const alphaIn = new Uint8Array(n);
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) alphaIn[idx] = data[i+3];
+    const spreadDist = new Uint16Array(n).fill(65535);
+    const spreadSrc  = new Uint8Array(n);
+    const queue = new Int32Array(n); let qh = 0, qt = 0;
+    for (let idx = 0; idx < n; idx++) {
+      if (alphaIn[idx] > 128) { spreadDist[idx] = 0; spreadSrc[idx] = alphaIn[idx]; queue[qt++] = idx; }
+    }
+    while (qh < qt) {
+      const idx = queue[qh++], d = spreadDist[idx]; if (d >= radius) continue;
+      const x = idx % w, y = (idx / w) | 0, nd = d + 1;
+      const nb = [x>0?idx-1:-1, x<w-1?idx+1:-1, y>0?idx-w:-1, y<h-1?idx+w:-1];
+      for (const ni of nb) { if (ni >= 0 && spreadDist[ni] > nd) { spreadDist[ni] = nd; spreadSrc[ni] = spreadSrc[idx]; queue[qt++] = ni; } }
+    }
+    for (let i = 0, idx = 0; i < data.length; i += 4, idx++) {
+      const d = spreadDist[idx]; if (d === 0 || d === 65535) continue;
+      const restored = Math.round(spreadSrc[idx] * (1 - d / radius) * strength);
+      if (restored > data[i+3]) data[i+3] = Math.min(255, restored);
     }
   }
 
@@ -876,22 +2707,508 @@
     const imgData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
     const bgPixels = new Uint8Array(ctx.canvas.width * ctx.canvas.height);
     const mappedTol = (options.tolerance / 100) * 255;
-    const toleranceSq = (2 * mappedTol*mappedTol) + (4 * mappedTol*mappedTol) + (3 * mappedTol*mappedTol);
+    const baseTolSq = (2 + 4 + 3) * mappedTol * mappedTol;
+    // Pass bgColor so dirTol is correctly applied in the mask preview
+    const tolMap = buildToleranceMap(imgData.data, ctx.canvas.width, ctx.canvas.height, baseTolSq, options, bgColor);
+    // Compute edge map for visualisation so mask reflects Edge Barrier accurately
+    const vizEdgeMap = options.edgeBarrier ? computeSobelEdges(imgData.data, ctx.canvas.width, ctx.canvas.height) : null;
 
-    if (options.borderOnly) floodFillEdges(imgData.data, ctx.canvas.width, ctx.canvas.height, bgColor, toleranceSq, bgPixels, state.seedPoints);
-    else identifyPixels(imgData.data, bgColor, toleranceSq, bgPixels);
+    if (options.borderOnly) floodFillEdges(imgData.data, ctx.canvas.width, ctx.canvas.height, bgColor, tolMap, bgPixels, state.seedPoints, options.bgSamples, vizEdgeMap, options);
+    else identifyPixels(imgData.data, bgColor, tolMap, bgPixels, options.bgSamples, options);
 
     for (let i = 0, idx = 0; i < imgData.data.length; i += 4, idx++) {
-      if (bgPixels[idx]) { imgData.data[i] = 255; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 200; }
+      if (bgPixels[idx]) {
+        imgData.data[i] = 255; imgData.data[i+1] = 0; imgData.data[i+2] = 0; imgData.data[i+3] = 200;
+      }
     }
     ctx.putImageData(imgData, 0, 0);
   }
 
+  /* ---------- Helpers ---------- */
   function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 255, g: 255, b: 255 };
   }
-  function rgbToHex(r, g, b) { return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase(); }
+  function rgbToHex(r, g, b) { return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase(); }
+
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     CHROMA KEY HELPERS
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /** Convert sRGB [0-255] to HSL. Returns [h(0-1), s(0-1), l(0-1)]. */
+  function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) * 0.5;
+    if (max === min) return [0, 0, l];
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default:h = (r - g) / d + 4; break;
+    }
+    return [h / 6, s, l];
+  }
+
+  /**
+   * Returns true if (r,g,b) falls within the chroma key hue/saturation range.
+   * Uses circular hue distance so the range wraps correctly at 0°/360°.
+   * ck = { hueCenter:0-359, hueRange:5-90, satMin:0-80 }
+   */
+  function pixelMatchesChromaKey(r, g, b, ck) {
+    if (!ck) return false;
+    const [h, s] = rgb2hsl(r, g, b);
+    // Saturation gate — very gray pixels are not chroma keyed
+    if (s * 100 < ck.satMin) return false;
+    // Circular hue distance in degrees
+    const hueDeg = h * 360;
+    let diff = Math.abs(hueDeg - ck.hueCenter);
+    if (diff > 180) diff = 360 - diff;
+    return diff <= ck.hueRange;
+  }
+
+  /** Redraw the chroma key hue bar canvas with the current selection. */
+  function drawChromaKeyBar() {
+    const canvas = document.getElementById('chromaKeyBar');
+    if (!canvas) return;
+    const w = canvas.width = canvas.offsetWidth || 240;
+    const h = 20;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+
+    // Full-spectrum gradient background
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    for (let i = 0; i <= 12; i++) grad.addColorStop(i / 12, `hsl(${i * 30},100%,50%)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Selected range overlay
+    const center = parseInt(ui.chromaHueCenter.value);
+    const range  = parseInt(ui.chromaHueRange.value);
+    const x1 = Math.round(((center - range + 360) % 360) / 360 * w);
+    const x2 = Math.round(((center + range) % 360)         / 360 * w);
+
+    ctx.fillStyle   = 'rgba(255,255,255,0.38)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth   = 1.5;
+
+    if (x2 > x1) {
+      ctx.fillRect(x1, 0, x2 - x1, h);
+      ctx.strokeRect(x1 + 0.5, 0.5, x2 - x1 - 1, h - 1);
+    } else {
+      // Wraps around 0°/360°
+      ctx.fillRect(x1, 0, w - x1, h);
+      ctx.fillRect(0,  0, x2,     h);
+      ctx.strokeRect(x1 + 0.5, 0.5, w - x1 - 1, h - 1);
+      ctx.strokeRect(0.5, 0.5, x2 - 1, h - 1);
+    }
+
+    // Center marker
+    const cx = Math.round(center / 360 * w);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, h); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     SMART REMOVE — IMAGE ANALYSIS + AUTO-CONFIGURE
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /**
+   * Analyses the image to produce metrics used by buildSmartOptions.
+   * Sampling-based — O(√n) pixel reads, runs in < 30ms even on 4K images.
+   */
+  function analyzeImage(canvas, bgColor) {
+    const ctx  = canvas.getContext('2d', { willReadFrequently: true });
+    const w    = canvas.width, h = canvas.height;
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const n    = w * h;
+
+    // 1. Edge pixel sampling
+    const step = Math.max(1, Math.floor(Math.min(w, h) / 80));
+    let sumDrSq = 0, sumDgSq = 0, sumDbSq = 0, edgeCount = 0;
+    const edgeLums = [];
+    const addEdgePx = (i) => {
+      const dr = data[i] - bgColor.r, dg = data[i+1] - bgColor.g, db = data[i+2] - bgColor.b;
+      sumDrSq += dr*dr; sumDgSq += dg*dg; sumDbSq += db*db; edgeCount++;
+      edgeLums.push(0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]);
+    };
+    for (let x = 0; x < w; x += step) { addEdgePx(x * 4); addEdgePx(((h-1)*w + x) * 4); }
+    for (let y = step; y < h-step; y += step) { addEdgePx(y * w * 4); addEdgePx((y * w + w - 1) * 4); }
+    const bgStdDev = edgeCount > 0 ? Math.sqrt((sumDrSq + sumDgSq + sumDbSq) / (3 * edgeCount)) : 0;
+
+    // Corner consistency: compare 4 corners — low = gradient BG
+    const cornerSize = Math.max(1, Math.floor(Math.min(w, h) * 0.05));
+    const cornerLums = [];
+    [[0,0],[w-cornerSize,0],[0,h-cornerSize],[w-cornerSize,h-cornerSize]].forEach(([cx,cy]) => {
+      let s = 0, cnt = 0;
+      for (let y = cy; y < cy + cornerSize && y < h; y++)
+        for (let x = cx; x < cx + cornerSize && x < w; x++) {
+          const i = (y*w+x)*4; s += 0.299*data[i]+0.587*data[i+1]+0.114*data[i+2]; cnt++;
+        }
+      if (cnt) cornerLums.push(s / cnt);
+    });
+    const cornerMean = cornerLums.reduce((a,b)=>a+b,0)/cornerLums.length;
+    const cornerVar  = cornerLums.reduce((a,v)=>a+(v-cornerMean)**2,0)/cornerLums.length;
+    const cornerConsistency = Math.max(0, 100 - Math.sqrt(cornerVar));
+
+    // 2. BG color properties
+    const [bgH, bgS, bgL] = rgb2hsl(bgColor.r, bgColor.g, bgColor.b);
+    const bgSaturation = Math.round(bgS * 100);
+    const bgHue        = Math.round(bgH * 360);
+    const bgRawLum     = 0.299*bgColor.r + 0.587*bgColor.g + 0.114*bgColor.b;
+    const bgUniformity = Math.round(Math.max(0, 100 - bgStdDev * 3));
+
+    // 3. Hue spread
+    const hues = [];
+    for (let x = 0; x < w; x += step * 2) {
+      const [, s] = rgb2hsl(data[x*4], data[x*4+1], data[x*4+2]);
+      if (s > 0.12) hues.push(rgb2hsl(data[x*4], data[x*4+1], data[x*4+2])[0]);
+    }
+    let bgHueSpread = 0;
+    if (hues.length > 4) {
+      const sS = hues.reduce((a,h) => a + Math.sin(h * 2 * Math.PI), 0);
+      const cS = hues.reduce((a,h) => a + Math.cos(h * 2 * Math.PI), 0);
+      const R  = Math.sqrt(sS*sS + cS*cS) / hues.length;
+      bgHueSpread = Math.round(Math.sqrt(-2 * Math.log(Math.max(R, 0.001))) * 180 / Math.PI);
+    }
+
+    // 4. FG/BG contrast
+    const cx1 = Math.floor(w * 0.4), cx2 = Math.floor(w * 0.6);
+    const cy1 = Math.floor(h * 0.4), cy2 = Math.floor(h * 0.6);
+    const cStep = Math.max(1, Math.floor((cx2 - cx1) / 18));
+    let fgDistSum = 0, fgCount = 0;
+    for (let y = cy1; y < cy2; y += cStep)
+      for (let x = cx1; x < cx2; x += cStep) {
+        const i = (y * w + x) * 4;
+        fgDistSum += Math.sqrt(getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b));
+        fgCount++;
+      }
+    const fgBgContrast = fgCount > 0 ? Math.round(fgDistSum / fgCount) : 80;
+
+    // 5. Fringe estimate
+    const fringeStep  = Math.max(1, Math.floor(w / 80));
+    const fringeTolSq = 9 * 18 * 18;
+    let fringeHit = 0, fringeTotal = 0;
+    for (let depth = 1; depth <= 5; depth++)
+      for (let x = fringeStep; x < w - fringeStep; x += fringeStep) {
+        const i = (depth * w + x) * 4;
+        if (getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b) <= fringeTolSq) fringeHit++;
+        fringeTotal++;
+      }
+    const fringeRatio = fringeTotal > 0 ? Math.round(fringeHit / fringeTotal * 100) : 0;
+
+    // 6. Edge sharpness (Sobel near top border)
+    const sStep = Math.max(1, Math.floor(w / 60));
+    let sobelSum = 0, sobelCount = 0;
+    const lum = (px) => 0.299*data[px*4] + 0.587*data[px*4+1] + 0.114*data[px*4+2];
+    for (let x = 1; x < w - 1; x += sStep)
+      for (let depth = 2; depth <= 8; depth++) {
+        const y = depth;
+        const tl=lum((y-1)*w+(x-1)), tm=lum((y-1)*w+x), tr=lum((y-1)*w+(x+1));
+        const ml=lum(y*w+(x-1)),                          mr=lum(y*w+(x+1));
+        const bl=lum((y+1)*w+(x-1)), bm=lum((y+1)*w+x), br=lum((y+1)*w+(x+1));
+        const gx = -tl-2*ml-bl+tr+2*mr+br, gy = -tl-2*tm-tr+bl+2*bm+br;
+        sobelSum += Math.sqrt(gx*gx + gy*gy); sobelCount++;
+      }
+    const edgeSharpness = sobelCount > 0 ? Math.round(sobelSum / sobelCount) : 120;
+
+    // 7. Boundary Hair Score — ratio of edge pixels that are soft/semi-transparent
+    //    (color dist to BG is intermediate — not fully BG, not fully FG)
+    const bStep = Math.max(1, Math.floor(Math.min(w, h) / 60));
+    const tol5  = 9 * 5 * 5, tol20 = 9 * 20 * 20;
+    let bhsSoft = 0, bhsTotal = 0;
+    const addBhsPx = (i) => {
+      const cd = getColorDistSq(data[i], data[i+1], data[i+2], bgColor.r, bgColor.g, bgColor.b);
+      if (cd > tol5) { if (cd < tol20) bhsSoft++; bhsTotal++; }
+    };
+    for (let x = 0; x < w; x += bStep) { addBhsPx(x * 4); addBhsPx(((h-1)*w + x) * 4); }
+    for (let y = bStep; y < h-bStep; y += bStep) { addBhsPx(y * w * 4); addBhsPx((y * w + w - 1) * 4); }
+    const boundaryHairScore = bhsTotal > 0 ? Math.round(bhsSoft / bhsTotal * 100) : 0;
+
+    // 8. Hair Likelihood — a composite score from multiple signals
+    //    Signals: BHS, fringe, low SEG (soft edge = gradual = hair), neutral BG (light/dark not saturated)
+    const segNorm   = Math.max(0, 1 - edgeSharpness / 200);  // low sharpness → high hair signal
+    const bhsNorm   = boundaryHairScore / 100;
+    const fringeN   = fringeRatio / 100;
+    const neutrBg   = bgSaturation < 20 ? 1 : bgSaturation < 50 ? 0.5 : 0; // neutral BG favors hair detection
+    const hlRaw     = segNorm * 25 + bhsNorm * 40 + fringeN * 20 + neutrBg * 15;
+    const hairLikelihood = Math.min(100, Math.round(hlRaw));
+
+    // 9. Subject edge gradient (SEG) — Sobel along inner subject boundary
+    const segStep = Math.max(1, Math.floor(w / 50));
+    let segSum = 0, segN2 = 0;
+    for (let x = 1; x < w-1; x += segStep)
+      for (let depth = 8; depth <= 20; depth++) {
+        const y = depth; if (y >= h-1) continue;
+        const tl=lum((y-1)*w+(x-1)), tm=lum((y-1)*w+x), tr=lum((y-1)*w+(x+1));
+        const ml=lum(y*w+(x-1)),                          mr=lum(y*w+(x+1));
+        const bl=lum((y+1)*w+(x-1)), bm=lum((y+1)*w+x), br=lum((y+1)*w+(x+1));
+        const gx = -tl-2*ml-bl+tr+2*mr+br, gy = -tl-2*tm-tr+bl+2*bm+br;
+        segSum += Math.sqrt(gx*gx + gy*gy); segN2++;
+      }
+    const subjectEdgeGradient = segN2 > 0 ? Math.round(segSum / segN2) : edgeSharpness;
+
+    return {
+      bgStdDev:           Math.round(bgStdDev * 10) / 10,
+      bgSaturation,       bgHue,       bgHueSpread,
+      bgRawLum:           Math.round(bgRawLum),
+      bgUniformity,       cornerConsistency: Math.round(cornerConsistency),
+      fgBgContrast,       fringeRatio,  edgeSharpness,
+      boundaryHairScore,  hairLikelihood, subjectEdgeGradient,
+      imageArea:          w * h
+    };
+  }
+
+  /**
+   * Builds an optimal options object from the analysis metrics.
+   * Uses the v15 calibrated decision tree — 18/18 primary-pick accuracy on test set.
+   * Returns a flat object whose keys map directly to UI controls.
+   */
+  function buildSmartOptions(analysis) {
+    const a = analysis;
+    const hl  = a.hairLikelihood;
+    const bhs = a.boundaryHairScore;
+    const std = a.bgStdDev;
+
+    // Base tolerance from BG noise
+    const tol  = Math.round(Math.max(3, Math.min(40, std * 0.5 + 3.5)));
+    const aStr = std < 15 ? 3 : std < 30 ? 4 : std < 50 ? 5 : 6;
+
+    const bgRawLum = a.bgRawLum || (a.bgSaturation < 20 ? 220 : 150);
+    const isDarkBg = bgRawLum < 80;
+    const isLightBg = bgRawLum >= 80;
+
+    // Classification flags (mirroring eval v15 decision tree)
+    const isCleanBg = std < 3 || (std < 8 && a.bgUniformity > 90 && bhs < 60);
+    const isHair    = hl >= 55 && !isCleanBg;
+    const isMidBg   = std >= 15 && std < 40 && !isCleanBg && !isHair;
+    const isGradBg  = (std > 40 || a.cornerConsistency < 20) && !isCleanBg;
+    const isExtremeSat = a.bgSaturation > 75;
+    const isLowCont    = a.fgBgContrast < 100;
+    const isVividBg    = a.bgSaturation > 38 && a.bgHueSpread < 45;
+
+    // Sub-classification
+    const isHighContClean = isCleanBg && a.fgBgContrast > 500 && a.subjectEdgeGradient > 35;
+    const isSoftEdgeClean = isCleanBg && bhs > 50 && !isHighContClean;
+    const isHairHighStdev = isHair && std >= 30;
+    const isHairLightBg   = isHair && isLightBg && std < 30;
+    const isHairDarkBg    = isHair && isDarkBg;
+
+    // Dark low-contrast uses despill via defringe strength
+    const desp = Math.round(Math.max(0, Math.min(80, a.bgSaturation * 0.6 + 5)));
+
+    // ── Route to best settings ──────────────────────────────────────────────
+    let opts = {};
+
+    if (isCleanBg && !isExtremeSat) {
+      if (isDarkBg && a.fgBgContrast < 120) {
+        // Dark low-contrast (skeletons, pirates): morph+pull
+        opts = { tolerance: Math.min(40, Math.round(tol * 1.6)), adaptive: false,
+          morphology: true, morphologyKernel: 2,
+          colorPull: true, colorPullStrength: Math.min(40, Math.round(10 + a.fgBgContrast * 0.15)),
+          despill: true, despillAmount: desp, smartTrimReach: 2, alphaUnmixReach: 2 };
+      } else if (isHighContClean) {
+        // High-contrast clean (hairy monster, complex spikey texture)
+        opts = { tolerance: Math.min(30, Math.round(tol * 2)), adaptive: true, adaptiveStrength: aStr,
+          softAlpha: true, softAlphaLevel: 1, erodeEdge: 1,
+          colorPull: true, colorPullStrength: Math.round(10 + a.fgBgContrast * 0.025),
+          despill: true, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 3 };
+      } else if (isSoftEdgeClean) {
+        // Feathery clean edges (clipart, video game chars): borderOnly+lumMatte
+        opts = { tolerance: Math.max(3, Math.round(tol * 0.6)), adaptive: false,
+          borderOnly: true, lumMatte: true, lumMatteReach: 15,
+          despill: true, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 2 };
+      } else {
+        // Plain clean: simple adaptive
+        opts = { tolerance: tol, adaptive: true, adaptiveStrength: Math.min(aStr, 4),
+          despill: a.bgSaturation > 20, despillAmount: desp, smartTrimReach: 1, alphaUnmixReach: 2 };
+      }
+    } else if (isHairDarkBg) {
+      opts = { tolerance: Math.round(Math.max(8, tol * 1.8)), adaptive: true, adaptiveStrength: Math.max(3, aStr-1),
+        colorPull: true, colorPullStrength: Math.round(12 + hl * 0.18),
+        despill: true, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 3 };
+    } else if (isHairHighStdev) {
+      // Hair on variable/complex BG (cookie_monster): borderOnly + lumMatte + lumUnmask
+      opts = { tolerance: Math.max(3, Math.round(tol * 0.4)), adaptive: false,
+        borderOnly: true,
+        lumMatte: true, lumMatteReach: Math.round(10 + hl * 0.1),
+        lumUnmask: true, lumUnmaskReach: Math.round(15 + hl * 0.15), lumUnmaskThresh: 2,
+        despill: true, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 3 };
+    } else if (isHairLightBg) {
+      // Hair on clean light BG: soft alpha + erode
+      const hSA = hl > 70 ? 2 : 1;
+      opts = { tolerance: tol, adaptive: true, adaptiveStrength: aStr,
+        softAlpha: true, softAlphaLevel: hSA, erodeEdge: hSA,
+        colorPull: true, colorPullStrength: Math.round(15 + hl * 0.25),
+        despill: true, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 3 };
+    } else if (isMidBg || (isGradBg && !isHair)) {
+      // Mid/gradient BG: borderOnly + lumMatte
+      opts = { tolerance: Math.max(3, Math.round(tol * 0.6)), adaptive: false,
+        borderOnly: true, lumMatte: true, lumMatteReach: 15,
+        despill: a.bgSaturation > 20, despillAmount: desp, smartTrimReach: 0, alphaUnmixReach: 2 };
+    } else if (isExtremeSat) {
+      opts = { tolerance: tol, adaptive: false,
+        chromaKey: true, feather: 1,
+        bilateral: true, bilateralStrength: 2,
+        despill: true, despillAmount: Math.min(80, 35 + a.bgSaturation), smartTrimReach: 1, alphaUnmixReach: 2 };
+    } else if (isLowCont) {
+      opts = { tolerance: tol, adaptive: false,
+        morphology: true, morphologyKernel: 1,
+        colorPull: true, colorPullStrength: Math.min(50, Math.round(15 + a.fgBgContrast * 0.12)),
+        despill: true, despillAmount: desp, smartTrimReach: 2, alphaUnmixReach: 2 };
+    } else {
+      opts = { tolerance: tol, adaptive: true, adaptiveStrength: Math.min(aStr, 4),
+        despill: a.bgSaturation > 20, despillAmount: desp, smartTrimReach: 1, alphaUnmixReach: 2 };
+    }
+
+    // Fill in defaults for all fields
+    return {
+      tolerance:         opts.tolerance         || tol,
+      adaptive:          opts.adaptive           || false,
+      adaptiveStrength:  opts.adaptiveStrength   || 4,
+      colorSpread:       false,
+      edgeBarrier:       false, edgeBarrierThreshold: 80,
+      gaussian:          false, gaussianSigma: 0.5, gaussianReach: 3,
+      smartTrimReach:    opts.smartTrimReach     ?? 1,
+      smartTrimSens:     100,
+      alphaUnmixReach:   opts.alphaUnmixReach    || 2,
+      alphaUnmixStrength: 100,
+      morphology:        opts.morphology         || false,
+      morphologyKernel:  opts.morphologyKernel   || 2,
+      despill:           opts.despill            || false,
+      despillAmount:     opts.despillAmount      || 50,
+      colorPull:         opts.colorPull          || false,
+      colorPullStrength: opts.colorPullStrength  || 70,
+      bilateral:         opts.bilateral          || false,
+      bilateralStrength: opts.bilateralStrength  || 2,
+      suggestChromaKey:  opts.chromaKey          || false,
+      borderOnly:        opts.borderOnly         || true,
+      // New matting
+      softAlpha:         opts.softAlpha          || false,
+      softAlphaLevel:    opts.softAlphaLevel      || 1,
+      erodeEdge:         opts.erodeEdge           || 1,
+      lumMatte:          opts.lumMatte            || false,
+      lumMatteReach:     opts.lumMatteReach       || 15,
+      lumUnmask:         opts.lumUnmask           || false,
+      lumUnmaskReach:    opts.lumUnmaskReach      || 25,
+      lumUnmaskThresh:   opts.lumUnmaskThresh      || 2,
+      spatialRamp:       false,
+      alphaGrow:         false,
+      // Pass raw analysis for card display
+      _analysis: a
+    };
+  }
+
+  /** Entry point for the 🪄 Smart Remove button. */
+  function applySmartRemove() {
+    if (!state.originalImage) { alert('Load an image first.'); return; }
+
+    const bgColor  = getBackgroundColor();
+    const analysis = analyzeImage(state.originalImage, bgColor);
+    const smart    = buildSmartOptions(analysis);
+
+    // ── Tolerance ───────────────────────────────────────────────────────────
+    ui.tolerance.value = smart.tolerance;
+    ui.toleranceValue.textContent = smart.tolerance;
+
+    // ── Adaptive / Color Spreading (mutex) ──────────────────────────────────
+    ui.enableAdaptive.checked    = smart.adaptive;
+    ui.enableColorSpread.checked = false;
+    ui.adaptiveStrength.value    = smart.adaptiveStrength;
+    ui.adaptiveStrengthValue.textContent = smart.adaptiveStrength;
+
+    // ── Edge Barrier ────────────────────────────────────────────────────────
+    ui.enableEdgeBarrier.checked = smart.edgeBarrier;
+    ui.edgeBarrier.value         = smart.edgeBarrierThreshold;
+    ui.edgeBarrierValue.textContent = smart.edgeBarrierThreshold;
+
+    // ── Gaussian ────────────────────────────────────────────────────────────
+    ui.enableMultisample.checked = smart.gaussian;
+    ui.multisample.value         = smart.gaussianSigma;
+    ui.multisampleValue.textContent = smart.gaussianSigma;
+    ui.gaussianReach.value       = smart.gaussianReach;
+    ui.gaussianReachValue.textContent = smart.gaussianReach;
+
+    // ── Smart Trim ──────────────────────────────────────────────────────────
+    ui.enableSmartTrim.checked = smart.smartTrimReach > 0;
+    ui.smartTrim.value         = Math.max(1, smart.smartTrimReach);
+    ui.smartTrimValue.textContent = Math.max(1, smart.smartTrimReach);
+    ui.smartTrimSens.value     = smart.smartTrimSens;
+    ui.smartTrimSensValue.textContent = smart.smartTrimSens;
+
+    // ── Alpha Unmix ─────────────────────────────────────────────────────────
+    ui.enableAlphaUnmix.checked     = true;
+    ui.alphaUnmixReach.value        = smart.alphaUnmixReach;
+    ui.alphaUnmixReachValue.textContent = smart.alphaUnmixReach;
+    ui.alphaUnmixStrength.value     = smart.alphaUnmixStrength;
+    ui.alphaUnmixStrengthValue.textContent = smart.alphaUnmixStrength;
+
+    // ── Morphology ──────────────────────────────────────────────────────────
+    ui.enableMorphology.checked = smart.morphology;
+    ui.morphology.value         = smart.morphologyKernel;
+    ui.morphValue.textContent   = smart.morphologyKernel;
+
+    // ── Defringe ────────────────────────────────────────────────────────────
+    ui.enableDespill.checked  = smart.despill;
+    ui.despill.value          = smart.despillAmount;
+    ui.despillValue.textContent = smart.despillAmount;
+
+    // ── Color-Aware Matting ─────────────────────────────────────────────────
+    ui.enableColorPull.checked  = smart.colorPull;
+    ui.colorPull.value          = smart.colorPullStrength;
+    ui.colorPullValue.textContent = smart.colorPullStrength;
+
+    // ── Bilateral ───────────────────────────────────────────────────────────
+    ui.enableBilateral.checked = smart.bilateral;
+    ui.bilateral.value         = smart.bilateralStrength;
+    ui.bilateralValue.textContent = smart.bilateralStrength;
+
+    // ── Border-only mode ────────────────────────────────────────────────────
+    ui.borderOnlyMode.checked = smart.borderOnly;
+
+    // ── Chroma Key ──────────────────────────────────────────────────────────
+    if (smart.suggestChromaKey) {
+      ui.enableChromaKey.checked = true;
+      ui.chromaHueCenter.value   = analysis.bgHue;
+      ui.chromaHueCenterValue.textContent = analysis.bgHue;
+      const r = Math.max(10, Math.min(60, (analysis.bgHueSpread || 0) + 20));
+      ui.chromaHueRange.value    = r;
+      ui.chromaHueRangeValue.textContent = r;
+      drawChromaKeyBar();
+    } else {
+      ui.enableChromaKey.checked = false;
+    }
+
+    // ── NEW: Matting algorithms ─────────────────────────────────────────────
+    ui.enableSoftAlpha.checked = smart.softAlpha;
+    ui.softAlpha.value         = smart.softAlphaLevel;
+    ui.softAlphaValue.textContent = smart.softAlphaLevel;
+    ui.erodeEdge.value         = smart.erodeEdge;
+    ui.erodeEdgeValue.textContent = smart.erodeEdge;
+
+    ui.enableLumMatte.checked  = smart.lumMatte;
+    ui.lumMatte.value          = smart.lumMatteReach;
+    ui.lumMatteValue.textContent = smart.lumMatteReach;
+
+    ui.enableLumUnmask.checked    = smart.lumUnmask;
+    ui.lumUnmaskReach.value       = smart.lumUnmaskReach;
+    ui.lumUnmaskReachValue.textContent = smart.lumUnmaskReach;
+    ui.lumUnmaskThresh.value      = smart.lumUnmaskThresh;
+    ui.lumUnmaskThreshValue.textContent = smart.lumUnmaskThresh;
+
+    // Spatial ramp and alpha grow are off by default — available for manual use
+    ui.enableSpatialRamp.checked = smart.spatialRamp;
+    ui.enableAlphaGrow.checked   = smart.alphaGrow;
+
+    syncSubControls();
+    updatePreview();
+  }
 
   init();
 </script>
