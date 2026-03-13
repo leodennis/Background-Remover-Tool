@@ -2821,6 +2821,7 @@
 
   /**
    * Analyses the image to produce metrics used by buildSmartOptions.
+   * All values come from an iterative training process so handle with care.
    * Sampling-based — O(√n) pixel reads, runs in < 30ms even on 4K images.
    */
   function analyzeImage(canvas, bgColor) {
@@ -2968,6 +2969,7 @@
   /**
    * Builds an optimal options object from the analysis metrics.
    * Uses the v15 calibrated decision tree — 18/18 primary-pick accuracy on test set.
+   * All values come from an iterative training process so handle with care.
    * Returns a flat object whose keys map directly to UI controls.
    */
   function buildSmartOptions(analysis) {
